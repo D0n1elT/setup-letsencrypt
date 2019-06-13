@@ -60,15 +60,14 @@ fi
 
 
 ### Installing Base64 ###
-echo "Installing Base64 via APT"
+#echo "Installing Base64 via APT"
 #apt install base64
 #TODO: SEARCH BASE64 PACKET
-echo "OK"
+#echo "OK"
 
 
 ### Making directory $certconfigdir ###
 echo "Creating cert. config directory"
-#mkdir $certconfigdir
 test -d "$certconfigdir" || mkdir -p "$certconfigdir"
 echo "OK"
 
@@ -80,7 +79,6 @@ if ! [ -s "$certconfigdir/web_certrequest.sh" ]; then
 else
 	echo "Web_certrequest.sh was already deployed."
 fi
-echo "OK"
 
 echo "Set permission for web_certrequest.sh"
 chmod 755 "$certconfigdir/web_certrequest.sh"
@@ -90,13 +88,10 @@ echo "OK"
 ### Deploying openssl config ###
 echo "Deploying openssl config"
 if ! [ -s "$certconfigdir/openssl::$FQDNunderscores.cnf" ]; then
-	#echo "WyByZXEgXQpkZWZhdWx0X2JpdHMgICAgICAgICAgICA9IDQwOTYgICAgICAgICAgICAgICAgICAjIFNpemUgb2Yga2V5cwpkaXN0aW5ndWlzaGVkX25hbWUgICAgICA9IHJlcV9kaXN0aW5ndWlzaGVkX25hbWUKcmVxX2V4dGVuc2lvbnMgICAgICAgICAgPSB2M19yZXEKeDUwOV9leHRlbnNpb25zICAgICAgICAgPSB2M19yZXEKClsgcmVxX2Rpc3Rpbmd1aXNoZWRfbmFtZSBdCiMgVmFyaWFibGUgbmFtZSAgICAgICAgICAgUHJvbXB0IHN0cmluZwojLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSAgIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KMC5vcmdhbml6YXRpb25OYW1lICAgICAgPSBPcmdhbml6YXRpb24gTmFtZSAoY29tcGFueSkKb3JnYW5pemF0aW9uYWxVbml0TmFtZSAgPSBPcmdhbml6YXRpb25hbCBVbml0IE5hbWUgKGRlcGFydG1lbnQsIGRpdmlzaW9uKQplbWFpbEFkZHJlc3MgICAgICAgICAgICA9IEVtYWlsIEFkZHJlc3MKZW1haWxBZGRyZXNzX21heCAgICAgICAgPSA0MApsb2NhbGl0eU5hbWUgICAgICAgICAgICA9IExvY2FsaXR5IE5hbWUgKGNpdHksIGRpc3RyaWN0KQpzdGF0ZU9yUHJvdmluY2VOYW1lICAgICA9IFN0YXRlIG9yIFByb3ZpbmNlIE5hbWUgKGZ1bGwgbmFtZSkKY291bnRyeU5hbWUgICAgICAgICAgICAgPSBDb3VudHJ5IE5hbWUgKDIgbGV0dGVyIGNvZGUpCmNvdW50cnlOYW1lX21pbiAgICAgICAgID0gMgpjb3VudHJ5TmFtZV9tYXggICAgICAgICA9IDIKY29tbW9uTmFtZSAgICAgICAgICAgICAgPSBDb21tb24gTmFtZSAoaG9zdG5hbWUsIElQLCBvciB5b3VyIG5hbWUpCmNvbW1vbk5hbWVfbWF4ICAgICAgICAgID0gNjQKCiMgRGVmYXVsdCB2YWx1ZXMgZm9yIHRoZSBhYm92ZSwgZm9yIGNvbnNpc3RlbmN5IGFuZCBsZXNzIHR5cGluZy4KIyBWYXJpYWJsZSBuYW1lICAgICAgICAgICAgICAgICAgIFZhbHVlCiMtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0gICAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KMC5vcmdhbml6YXRpb25OYW1lX2RlZmF1bHQgICAgICA9IE15IENvbXBhbnkgICAgICAgICAgICAgICMgYWRhcHQgYXMgbmVlZGVkCmxvY2FsaXR5TmFtZV9kZWZhdWx0ICAgICAgICAgICAgPSBNeSBDaXR5ICAgICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZApzdGF0ZU9yUHJvdmluY2VOYW1lX2RlZmF1bHQgICAgID0gTXkgQ291bnR5L1N0YXRlICAgICAgICAgIyBhZGFwdCBhcyBuZWVkZWQKY291bnRyeU5hbWVfZGVmYXVsdCAgICAgICAgICAgICA9IEMgICAgICAgICAgICAgICAgICAgICAgICMgY291bnRyeSBjb2RlOiBlLmcuIERFIGZvciBHZXJtYW55CmNvbW1vbk5hbWVfZGVmYXVsdCAgICAgICAgICAgICAgPSBob3N0LmV4YW1wbGUuY29tICAgICAgICAjIGhvc3RuYW1lIG9mIHRoZSB3ZWJzZXJ2ZXIKZW1haWxBZGRyZXNzX2RlZmF1bHQgICAgICAgICAgICA9IGhvc3RtYXN0ZXJzQGV4YW1wbGUuY29tICMgYWRhcHQgYXMgbmVlZGVkCm9yZ2FuaXphdGlvbmFsVW5pdE5hbWVfZGVmYXVsdCAgPSBXZWJtYXN0ZXJ5ICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZAoKWyB2M19yZXEgXQojIEV4dGVuc2lvbnMgdG8gYWRkIHRvIGEgY2VydGlmaWNhdGUgcmVxdWVzdApiYXNpY0NvbnN0cmFpbnRzID0gQ0E6RkFMU0UKa2V5VXNhZ2UgPSBub25SZXB1ZGlhdGlvbiwgZGlnaXRhbFNpZ25hdHVyZSwga2V5RW5jaXBoZXJtZW50LCBrZXlFbmNpcGhlcm1lbnQsIGRhdGFFbmNpcGhlcm1lbnQsIGtleUFncmVlbWVudAoKIyBTb21lIENBcyBkbyBub3QgeWV0IHN1cHBvcnQgc3ViamVjdEFsdE5hbWUgaW4gQ1NScy4KIyBJbnN0ZWFkIHRoZSBhZGRpdGlvbmFsIG5hbWVzIGFyZSBmb3JtIGVudHJpZXMgb24gd2ViCiMgcGFnZXMgd2hlcmUgb25lIHJlcXVlc3RzIHRoZSBjZXJ0aWZpY2F0ZS4uLgpzdWJqZWN0QWx0TmFtZSAgICAgICAgICA9IEBhbHRfbmFtZXMKClthbHRfbmFtZXNdCiMjIyBob3N0LmV4YW1wbGUuY29tIGlzIHRoZSBGUUROCkROUy4xID0gaG9zdC5leGFtcGxlLmNvbQpETlMuMiA9IHd3dy5leGFtcGxlLmNvbQpETlMuMyA9IGV4YW1wbGUuY29tCkROUy40ID0gd2lraS5leGFtcGxlLmNvbQpETlMuNSA9IHd3dy5vbGQtY29tcGFueS1uYW1lLmJpeg==" | base64 -d - > "$certconfigdir/openssl::$FQDNunderscores.cnf"
-	#echo "WyByZXFfZGlzdGluZ3Vpc2hlZF9uYW1lIF0KIy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLUFEQVBUIEhFUkUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KMC5vcmdhbml6YXRpb25OYW1lX2RlZmF1bHQgICAgICA9IE15IENvbXBhbnkgICAgICAgICAgICAgICMgYWRhcHQgYXMgbmVlZGVkCmxvY2FsaXR5TmFtZV9kZWZhdWx0ICAgICAgICAgICAgPSBNeSBDaXR5ICAgICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZApzdGF0ZU9yUHJvdmluY2VOYW1lX2RlZmF1bHQgICAgID0gTXkgQ291bnR5L1N0YXRlICAgICAgICAgIyBhZGFwdCBhcyBuZWVkZWQKY291bnRyeU5hbWVfZGVmYXVsdCAgICAgICAgICAgICA9IERFICAgICAgICAgICAgICAgICAgICAgICMgY291bnRyeSBjb2RlOiBlLmcuIERFIGZvciBHZXJtYW55CmNvbW1vbk5hbWVfZGVmYXVsdCAgICAgICAgICAgICAgPSBob3N0LmV4YW1wbGUuY29tICAgICAgICAjIGhvc3RuYW1lIG9mIHRoZSB3ZWJzZXJ2ZXIKZW1haWxBZGRyZXNzX2RlZmF1bHQgICAgICAgICAgICA9IGhvc3RtYXN0ZXJzQGV4YW1wbGUuY29tICMgYWRhcHQgYXMgbmVlZGVkCm9yZ2FuaXphdGlvbmFsVW5pdE5hbWVfZGVmYXVsdCAgPSBXZWJtYXN0ZXJ5ICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZAoKMC5vcmdhbml6YXRpb25OYW1lICAgICAgPSBPcmdhbml6YXRpb24gTmFtZSAoY29tcGFueSkKb3JnYW5pemF0aW9uYWxVbml0TmFtZSAgPSBPcmdhbml6YXRpb25hbCBVbml0IE5hbWUgKGRlcGFydG1lbnQsIGRpdmlzaW9uKQplbWFpbEFkZHJlc3MgICAgICAgICAgICA9IEVtYWlsIEFkZHJlc3MKZW1haWxBZGRyZXNzX21heCAgICAgICAgPSA0MApsb2NhbGl0eU5hbWUgICAgICAgICAgICA9IExvY2FsaXR5IE5hbWUgKGNpdHksIGRpc3RyaWN0KQpzdGF0ZU9yUHJvdmluY2VOYW1lICAgICA9IFN0YXRlIG9yIFByb3ZpbmNlIE5hbWUgKGZ1bGwgbmFtZSkKY291bnRyeU5hbWUgICAgICAgICAgICAgPSBDb3VudHJ5IE5hbWUgKDIgbGV0dGVyIGNvZGUpCmNvdW50cnlOYW1lX21pbiAgICAgICAgID0gMgpjb3VudHJ5TmFtZV9tYXggICAgICAgICA9IDIKY29tbW9uTmFtZSAgICAgICAgICAgICAgPSBDb21tb24gTmFtZSAoaG9zdG5hbWUsIElQLCBvciB5b3VyIG5hbWUpCmNvbW1vbk5hbWVfbWF4ICAgICAgICAgID0gNjQKClsgdjNfcmVxIF0KYmFzaWNDb25zdHJhaW50cyA9IENBOkZBTFNFCmtleVVzYWdlID0gbm9uUmVwdWRpYXRpb24sIGRpZ2l0YWxTaWduYXR1cmUsIGtleUVuY2lwaGVybWVudCwga2V5RW5jaXBoZXJtZW50LCBkYXRhRW5jaXBoZXJtZW50LCBrZXlBZ3JlZW1lbnQKc3ViamVjdEFsdE5hbWUgICAgICAgICAgPSBAYWx0X25hbWVzCgpbIHJlcSBdCmRlZmF1bHRfYml0cyAgICAgICAgICAgID0gNDA5NiAgICAgICAgICAgICAgICAgICMgU2l6ZSBvZiBrZXlzCmRpc3Rpbmd1aXNoZWRfbmFtZSAgICAgID0gcmVxX2Rpc3Rpbmd1aXNoZWRfbmFtZQpyZXFfZXh0ZW5zaW9ucyAgICAgICAgICA9IHYzX3JlcQp4NTA5X2V4dGVuc2lvbnMgICAgICAgICA9IHYzX3JlcQoKW2FsdF9uYW1lc10KIyBFbnRlciB5b3VyIGFsdGVybmF0aXZlIEROUyBuYW1lcyAocGxlYXNlIG5vdGUgdGhlIGluY3JlbWVudGFsIG51bWJlcik=" | base64 -d - > "$certconfigdir/openssl::$FQDNunderscores.cnf"
 	echo "WyByZXFfZGlzdGluZ3Vpc2hlZF9uYW1lIF0KIy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLUFEQVBUIEhFUkUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KMC5vcmdhbml6YXRpb25OYW1lX2RlZmF1bHQgICAgICA9IE15IENvbXBhbnkgICAgICAgICAgICAgICMgYWRhcHQgYXMgbmVlZGVkCmxvY2FsaXR5TmFtZV9kZWZhdWx0ICAgICAgICAgICAgPSBNeSBDaXR5ICAgICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZApzdGF0ZU9yUHJvdmluY2VOYW1lX2RlZmF1bHQgICAgID0gTXkgQ291bnR5L1N0YXRlICAgICAgICAgIyBhZGFwdCBhcyBuZWVkZWQKY291bnRyeU5hbWVfZGVmYXVsdCAgICAgICAgICAgICA9IERFICAgICAgICAgICAgICAgICAgICAgICMgY291bnRyeSBjb2RlOiBlLmcuIERFIGZvciBHZXJtYW55CmNvbW1vbk5hbWVfZGVmYXVsdCAgICAgICAgICAgICAgPSBob3N0LmV4YW1wbGUuY29tICAgICAgICAjIGhvc3RuYW1lIG9mIHRoZSB3ZWJzZXJ2ZXIKZW1haWxBZGRyZXNzX2RlZmF1bHQgICAgICAgICAgICA9IGhvc3RtYXN0ZXJzQGV4YW1wbGUuY29tICMgYWRhcHQgYXMgbmVlZGVkCm9yZ2FuaXphdGlvbmFsVW5pdE5hbWVfZGVmYXVsdCAgPSBXZWJtYXN0ZXJ5ICAgICAgICAgICAgICAjIGFkYXB0IGFzIG5lZWRlZAojLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KMC5vcmdhbml6YXRpb25OYW1lICAgICAgPSBPcmdhbml6YXRpb24gTmFtZSAoY29tcGFueSkKb3JnYW5pemF0aW9uYWxVbml0TmFtZSAgPSBPcmdhbml6YXRpb25hbCBVbml0IE5hbWUgKGRlcGFydG1lbnQsIGRpdmlzaW9uKQplbWFpbEFkZHJlc3MgICAgICAgICAgICA9IEVtYWlsIEFkZHJlc3MKZW1haWxBZGRyZXNzX21heCAgICAgICAgPSA0MApsb2NhbGl0eU5hbWUgICAgICAgICAgICA9IExvY2FsaXR5IE5hbWUgKGNpdHksIGRpc3RyaWN0KQpzdGF0ZU9yUHJvdmluY2VOYW1lICAgICA9IFN0YXRlIG9yIFByb3ZpbmNlIE5hbWUgKGZ1bGwgbmFtZSkKY291bnRyeU5hbWUgICAgICAgICAgICAgPSBDb3VudHJ5IE5hbWUgKDIgbGV0dGVyIGNvZGUpCmNvdW50cnlOYW1lX21pbiAgICAgICAgID0gMgpjb3VudHJ5TmFtZV9tYXggICAgICAgICA9IDIKY29tbW9uTmFtZSAgICAgICAgICAgICAgPSBDb21tb24gTmFtZSAoaG9zdG5hbWUsIElQLCBvciB5b3VyIG5hbWUpCmNvbW1vbk5hbWVfbWF4ICAgICAgICAgID0gNjQKClsgdjNfcmVxIF0KYmFzaWNDb25zdHJhaW50cyA9IENBOkZBTFNFCmtleVVzYWdlID0gbm9uUmVwdWRpYXRpb24sIGRpZ2l0YWxTaWduYXR1cmUsIGtleUVuY2lwaGVybWVudCwga2V5RW5jaXBoZXJtZW50LCBkYXRhRW5jaXBoZXJtZW50LCBrZXlBZ3JlZW1lbnQKc3ViamVjdEFsdE5hbWUgICAgICAgICAgPSBAYWx0X25hbWVzCgpbIHJlcSBdCmRlZmF1bHRfYml0cyAgICAgICAgICAgID0gNDA5NiAgICAgICAgICAgICAgICAgICMgU2l6ZSBvZiBrZXlzCmRpc3Rpbmd1aXNoZWRfbmFtZSAgICAgID0gcmVxX2Rpc3Rpbmd1aXNoZWRfbmFtZQpyZXFfZXh0ZW5zaW9ucyAgICAgICAgICA9IHYzX3JlcQp4NTA5X2V4dGVuc2lvbnMgICAgICAgICA9IHYzX3JlcQoKIy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLUFEQVBUIEhFUkUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KW2FsdF9uYW1lc10KIyBFbnRlciB5b3VyIGFsdGVybmF0aXZlIEROUyBuYW1lcyAocGxlYXNlIG5vdGUgdGhlIGluY3JlbWVudGFsIG51bWJlcikK" | base64 -d - > "$certconfigdir/openssl::$FQDNunderscores.cnf"
 else
 	echo "OpenSSL config was already deployed."
 fi
-echo "OK"
 
 echo "Set permission for openssl config"
 chmod 644 "$certconfigdir/openssl::$FQDNunderscores.cnf"
@@ -106,7 +101,6 @@ echo "OK"
 ### User is supposed to enter alternative DNS names ###
 ###  and cert. info (like orgaName or countryName)  ###
 echo "Please configure this file properly"
-echo "DNS.1 = $FQDN" >> "$certconfigdir/openssl::$FQDNunderscores.cnf"
 editor "$certconfigdir/openssl::$FQDNunderscores.cnf"
 echo "OK"
 
@@ -123,17 +117,17 @@ if [ "$debugmode" = false ]; then
 	### Copy private key to /etc/ssl/private ###
 	echo "Copying the private key '$certconfigdir/private/$FQDNunderscores.key' to /etc/ssl/private"
 	cp "$certconfigdir/private/$FQDNunderscores.key" "/etc/ssl/private/$FQDNunderscores.key"
-	echo "OK"
 
 	echo "Set permission for private key in /etc/ssl/private"
 	chmod 0600 "/etc/ssl/private/$FQDNunderscores.key"
-	echo "OK"
+
 	echo "Set ownership for private key in /etc/ssl/private"
 	chown root:root "/etc/ssl/private/$FQDNunderscores.key"
 	echo "OK"
 else
 	echo "Skipped copying private key"
 fi
+
 
 ### Installing acme-tiny ###
 echo "Installing acme-tiny via APT"
@@ -152,7 +146,6 @@ echo "Creating new directories in user home"
 test -d "$letsencrypt_user_home/bin"          || mkdir -p "$letsencrypt_user_home/bin"
 test -d "$letsencrypt_user_home/challenges"   || mkdir -p "$letsencrypt_user_home/challenges"
 test -d "$letsencrypt_user_home/.letsencrypt" || mkdir -p "$letsencrypt_user_home/.letsencrypt"
-echo "OK"
 
 
 echo "Set permission for directories in user home"
@@ -160,7 +153,6 @@ chmod 700 "$letsencrypt_user_home/bin"
 chmod 710 "$letsencrypt_user_home/challenges"
 chmod 700 "$letsencrypt_user_home/.letsencrypt"
 chmod 710 "$letsencrypt_user_home"
-echo "OK"
 
 echo "Set ownership for directories in user home"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/bin"
@@ -177,12 +169,9 @@ if ! [ -s "$letsencrypt_user_home/bin/letsencrypt-renew-certs" ]; then
 else
 	echo "Letsencrypt-renew-certs script was already deployed."
 fi
-echo "OK"
-
 
 echo "Set permission for letsencrypt-renews-certs script"
 chmod 755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
-echo "OK"
 
 echo "Set ownership for letsencrypt-renews-certs script"
 chown root:root  "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
@@ -193,7 +182,6 @@ echo "OK"
 echo "Creating the FQDN.cnf file..."
 if ! [ -s "$letsencrypt_user_home/bin/FQDN.cnf" ]; then
 	printf "$FQDNunderscores" | tr -d '\r' > "$letsencrypt_user_home/bin/FQDN.cnf"
-	echo "OK"
 else
 	echo "FQDN.cnf was already created."
 fi
@@ -203,10 +191,9 @@ chmod 644 "$letsencrypt_user_home/bin/FQDN.cnf"
 echo "OK"
 
 
-### Copying FQDN.csr from $certconfigdir into $letsencrypt_user_home/.letsencrypt ###
+### Copying $FQDNunderscores.csr from $certconfigdir into $letsencrypt_user_home/.letsencrypt ###
 echo "Copying $FQDNunderscores.csr from $certconfigdir into $letsencrypt_user_home/.letsencrypt"
 cp "$certconfigdir/$FQDNunderscores.csr" "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
-echo "OK"
 
 echo "Set permission for $FQDNunderscores.csr"
 chmod 644 "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
@@ -215,7 +202,9 @@ echo "OK"
 
 ### Testing for internet connection ###
 echo "Testing for internet connection..."
-# We would get the same with 'wget -q --spider http://letsencrypt.org' but then we would require wget
+# We would get the same with
+# 'wget -q --spider http://letsencrypt.org'
+# but then we would require wget
 echo -e "GET http://letsencrypt.org HTTP/1.0\n\n" | nc letsencrypt.org 80 > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
@@ -264,12 +253,10 @@ if [ "$inetEnabled" = true ]; then
 			exit -1
         	fi
 	fi
-	echo "OK"
 
 	echo "Set permission for letsencrypt certs"
 	chmod 644 "$file1"
 	chmod 644 "$file2"
-	echo "OK"
 
 	echo "Set ownership for letsencrypt certs"
 	chown root:root "$file1"
@@ -287,16 +274,14 @@ if [ -s "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key" ]; th
 else
 	echo "Didn't detect an account-key"
 	echo "Creating a new account-key"
-	echo "Creating account-key. '$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key'" >> $logfile
+	echo "Creating account-key '$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key'" >> $logfile
 	sudo su letsencrypt -c "openssl genrsa 4096 > $letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set permission for account key"
 	chmod 644 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
-	echo "OK"
 
 	echo "Set ownership for account key"
 	chown root:root "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
-	echo "OK"
 fi
 echo "OK"
 
@@ -310,7 +295,6 @@ if ! [ -s "$commandfile" ]; then
 else
 	echo "Command was already installed."
 fi
-echo "OK"
 
 echo "Making it executable"
 chmod 0700 $commandfile
@@ -330,14 +314,18 @@ fi
 ###SETTING UP###
 ####APACHE 2####
 ################
+
+
 apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
-
-
 ### Deploying $apache_acme_conf ###
 echo "Deploying '$apache_acme_conf'"
 touch $apache_acme_conf
-echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
-
+if ! [ -s "$apache_acme_conf" ]; then
+	echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
+	echo "OK"
+else
+	echo "Apache2 config was already deployed..."
+fi
 
 ### Enabling $apache_acme_conf ###
 echo "Enabling '$apache_acme_conf'..."
@@ -352,7 +340,7 @@ if [ $? -eq 0 ]; then
 	echo "OK"
 else
 	echo "NOT OK! Restarting Apache2 failed..."
-	echo "restarting apache2 failed" >> $logfile
+	echo "Restarting apache2 failed" >> $logfile
 fi
 
 ### EXECUTING letsencrypt-renew-script ###
@@ -363,8 +351,12 @@ echo "OK"
 
 
 ### Symlink cert ###
-sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt"
-echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+        echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+else
+        echo "NOT OK! But Symlink was problably just already there..."
+fi
 
 
 ### Enabling the SSL module ###
