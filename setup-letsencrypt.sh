@@ -3,7 +3,12 @@
 apt install openssl
 
 certconfigdir="/root/SSL-Certs"
-setup_apache=true
+# FIXME: check whether apache2 or nginx are running
+if [ -d "/etc/apache2" ]; then
+    setup_apache=true
+elif [ -d "/etc/nginx" ]; then
+    setup_nginx=true
+fi
 letsencrypt_username="letsencrypt"
 letsencrypt_user_home="/var/lib/$letsencrypt_username"
 
@@ -37,6 +42,9 @@ echo "Provided FQDN: $FQDN" >> $logfile
 
 echo "Setting up Apache2: $setup_apache"
 echo "Apache2: $setup_apache" >> $logfile
+
+echo "Setting up Nginx: $setup_nginx"
+echo "Nginx: $setup_nginx" >> $logfile
 
 echo "Certification-Config directory will be created in $certconfigdir"
 echo "Cert-Configs Directory: $certconfigdir" >> $logfile
@@ -384,86 +392,198 @@ echo "OK"
 #todo: cronjob
 
 
-if [ "$setup_apache" = false ]; then
-	echo "Didn't configure apache2."
+if [ "$setup_apache" == "true" ]; then
+	##################
+	### SETTING UP ###
+	### APACHE 2   ###
+	##################
+
+	apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
+	### Deploying $apache_acme_conf ###
+	echo "Deploying '$apache_acme_conf'"
+	touch $apache_acme_conf
+	if ! [ -s "$apache_acme_conf" ]; then
+		echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
+		echo "OK"
+	else
+		echo "Apache2 config was already deployed..."
+	fi
+
+	### Enabling $apache_acme_conf ###
+	echo "Enabling '$apache_acme_conf'..."
+	sudo a2enconf acme-tiny
+	echo "OK"
+
+
+	### Restarting Apache2 ###
+	echo "Restarting Apache2..."
+	sudo invoke-rc.d apache2 restart
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "NOT OK! Restarting Apache2 failed..."
+		echo "Restarting apache2 failed" >> $logfile
+	fi
+
+	### EXECUTING letsencrypt-renew-script ###
+	echo "Executing letsencrypt-renew-certs script!"
+	echo "Executing letsencrypt-renew-certs script" >> $logfile
+	sudo letsencrypt-renew-certs
+	echo "OK"
+
+
+	### Symlink cert ###
+	sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+	else
+		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+
+	### Enabling the SSL module ###
+	echo "Enabling the SSL module..."
+	sudo a2enmod ssl
+	echo "OK"
+
+
+	### Restarting Apache2 ###
+	echo "Restarting Apache2..."
+	sudo invoke-rc.d apache2 restart
+	echo "OK"
+
+	echo "-------------------"
+	echo "Script Finished!"
+	echo "Please adjust your apache ssl site configuration to:"
+	echo "-------------------"
+	echo "SSLCertificateFile      /etc/ssl/certs/$FQDNunderscores.fullchain.crt"
+	echo "SSLCertificateKeyFile   /etc/ssl/private/$FQDNunderscores.key"
+	echo ""
+	echo "If you want your users to be always redirected to https then put the following into your *HTTP* site configuration:"
+	echo ""
+	echo "RewriteEngine on"
+	echo "RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/.*"
+	echo "RewriteRule /(.*) https://$FQDN/\$1 [L,NC,NE]"
+	echo ""
+	echo "And don't forget to enable the rewrite module."
+	echo "a2enmod rewrite"
+	echo "-----THANK YOU-----"
+
+elif [ "$setup_nginx" == "true" ]; then
+
+	##################
+	### SETTING UP ###
+	###  NGINX     ###
+	##################
+
+	nginx_acme_conf="/etc/nginx/snippets/acme-tiny.conf"
+	### Deploying $nginx_acme_conf ###
+	echo "Deploying '$nginx_acme_conf'"
+	touch $nginx_acme_conf
+	if ! [ -s "$nginx_acme_conf" ]; then
+		echo "bG9jYXRpb24gLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlIHsKICAgIGFsaWFzIC92YXIvbGliL2xldHNlbmNyeXB0L2NoYWxsZW5nZXM7CiAgICBhbGxvdyBhbGw7CiAgICBhdXRvaW5kZXggb2ZmOwp9Cgo=" | base64 -d - > $nginx_acme_conf
+		echo "OK"
+	else
+		echo "Nginx config was already deployed..."
+	fi
+
+	### Enabling $apache_acme_conf ###
+
+	echo "Enabling '$nginx_acme_conf' for default website..."
+	if ! grep -q "snippets/acme-tiny.conf" /etc/nginx/sites-available/default; then
+		sed -r -i /etc/nginx/sites-available/default -e "/\s+root\ \/var\/www\/html;/a \\\n\ \ \ \ \ \ \ \ \# Provide /.well-known/acme-challenge location\n\ \ \ \ \ \ \ \ include snippets/acme-tiny.conf;"
+	fi
+
+	### Restarting Nginx ###
+	echo "Restarting Nginx..."
+	sudo invoke-rc.d nginx restart
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "NOT OK! Restarting Nginx failed..."
+		echo "Restarting nginx failed" >> $logfile
+	fi
+
+	### EXECUTING letsencrypt-renew-script ###
+	echo "Executing letsencrypt-renew-certs script!"
+	echo "Executing letsencrypt-renew-certs script" >> $logfile
+	sudo letsencrypt-renew-certs
+	echo "OK"
+
+	### Symlink cert ###
+	sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+	else
+		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+	### Restarting Nginx ###
+	echo "Restarting Nginx..."
+	sudo invoke-rc.d nginx restart
+	echo "OK"
+
+	echo "-------------------"
+	echo "Script Finished!"
+	echo "Please adjust your nginx ssl site configuration to:"
+	echo "-------------------"
+	cat << EOF
+## Redirects all HTTP traffic to the HTTPS host
+server {
+
+  listen 0.0.0.0:80;
+  listen [::]:80 ipv6only=on;
+
+  server_name ${FQDN};
+  server_tokens off; ## Don't show the nginx version number, a security best practice
+
+  location / {
+    rewrite     ^   https://\$host\$request_uri? permanent;
+  }
+
+  # handle Letsencrypt renewals without redirecting to https://
+  include snippets/acme-tiny.conf;
+
+  access_log  /var/log/nginx/${FQDN}_access.log;
+  error_log   /var/log/nginx/${FQDN}_error.log;
+}
+
+server {
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ipv6only=on ssl;
+
+    ## Strong SSL Security
+    ## https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html & https://cipherli.st/
+    ssl on;
+    ssl_certificate /etc/ssl/certs/${FQDNunderscores}.fullchain.crt;
+    ssl_certificate_key /etc/ssl/private/${FQDNunderscores}.key;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 5m;
+
+    # replace 'localhost' with your fqdn if you want to use zammad from remote
+    server_name ${FQDN};
+
+    # security - prevent information disclosure about server version
+    server_tokens off;
+
+    access_log  /var/log/nginx/${FQDN}_access.log;
+    error_log   /var/log/nginx/${FQDN}_error.log;
+
+    # YOUR SITE CONFIGURATION COMES BELOW HERE
+
+    # ...
+
+}
+EOF
+	echo "-----THANK YOU-----"
+
+else
+
+	echo "Didn't configure neither apache2 nor nginx."
 	echo "Script has finished!"
 	exit 0;
+
 fi
-
-################
-###SETTING UP###
-####APACHE 2####
-################
-
-
-apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
-### Deploying $apache_acme_conf ###
-echo "Deploying '$apache_acme_conf'"
-touch $apache_acme_conf
-if ! [ -s "$apache_acme_conf" ]; then
-	echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
-	echo "OK"
-else
-	echo "Apache2 config was already deployed..."
-fi
-
-### Enabling $apache_acme_conf ###
-echo "Enabling '$apache_acme_conf'..."
-sudo a2enconf acme-tiny
-echo "OK"
-
-
-### Restarting Apache2 ###
-echo "Restarting Apache2..."
-sudo invoke-rc.d apache2 restart
-if [ $? -eq 0 ]; then
-	echo "OK"
-else
-	echo "NOT OK! Restarting Apache2 failed..."
-	echo "Restarting apache2 failed" >> $logfile
-fi
-
-### EXECUTING letsencrypt-renew-script ###
-echo "Executing letsencrypt-renew-certs script!"
-echo "Executing letsencrypt-renew-certs script" >> $logfile
-sudo letsencrypt-renew-certs
-echo "OK"
-
-
-### Symlink cert ###
-sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-        echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
-else
-        echo "NOT OK! But Symlink was problably just already there..."
-fi
-
-
-### Enabling the SSL module ###
-echo "Enabling the SSL module..."
-sudo a2enmod ssl
-echo "OK"
-
-
-### Restarting Apache2 ###
-echo "Restarting Apache2..."
-sudo invoke-rc.d apache2 restart
-echo "OK"
-
-
-echo "-------------------"
-echo "Script Finished!"
-echo "Please adjust your apache ssl site configuration to:"
-echo "-------------------"
-echo "SSLCertificateFile      /etc/ssl/certs/$FQDNunderscores.fullchain.crt"
-echo "SSLCertificateKeyFile   /etc/ssl/private/$FQDNunderscores.key"
-echo ""
-echo "If you want your users to be always redirected to https then put the following into your *HTTP* site configuration:"
-echo ""
-echo "RewriteEngine on"
-echo "RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/.*"
-echo "RewriteRule /(.*) https://$FQDN/\$1 [L,NC,NE]"
-echo ""
-echo "And don't forget to enable the rewrite module."
-echo "a2enmod rewrite"
-echo "-----THANK YOU-----"
