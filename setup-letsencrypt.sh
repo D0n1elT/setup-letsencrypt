@@ -1,6 +1,6 @@
 #!/bin/bash
 
-apt install openssl
+apt install openssl ssl-cert
 
 certconfigdir="/root/SSL-Certs"
 # FIXME: check whether apache2 or nginx are running
@@ -134,10 +134,10 @@ if [ "$debugmode" = false ]; then
 	cp "$certconfigdir/private/$FQDNunderscores.key" "/etc/ssl/private/$FQDNunderscores.key"
 
 	echo "Set permission for private key in /etc/ssl/private"
-	chmod 0600 "/etc/ssl/private/$FQDNunderscores.key"
+	chmod 0640 "/etc/ssl/private/$FQDNunderscores.key"
 
 	echo "Set ownership for private key in /etc/ssl/private"
-	chown root:root "/etc/ssl/private/$FQDNunderscores.key"
+	chown root:ssl-cert "/etc/ssl/private/$FQDNunderscores.key"
 	echo "OK"
 else
 	echo "Skipped copying private key"
@@ -155,6 +155,8 @@ echo "Creating user: '$letsencrypt_username'"
 sudo adduser --system --home "$letsencrypt_user_home" --shell /bin/bash "$letsencrypt_username"
 echo "OK"
 
+### Make sure webuser is in ssl-cert group ###
+sudo adduser www-data ssl-cert
 
 ### Creating directories in user home ###
 echo "Creating new directories in user home"
@@ -171,9 +173,9 @@ chmod 710 "$letsencrypt_user_home"
 
 echo "Set ownership for directories in user home"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/bin"
-chown $letsencrypt_username:www-data "$letsencrypt_user_home/challenges"
+chown $letsencrypt_username:ssl-cert "$letsencrypt_user_home/challenges"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/.letsencrypt"
-chown $letsencrypt_username:www-data "$letsencrypt_user_home"
+chown $letsencrypt_username:ssl-cert "$letsencrypt_user_home"
 echo "OK"
 
 
