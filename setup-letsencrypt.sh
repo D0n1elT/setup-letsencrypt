@@ -1,5 +1,7 @@
 #!/bin/bash
 
+apt install openssl
+
 certconfigdir="/root/SSL-Certs"
 setup_apache=true
 letsencrypt_username="letsencrypt"
