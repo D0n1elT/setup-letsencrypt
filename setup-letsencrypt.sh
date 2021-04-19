@@ -14,7 +14,7 @@ letsencrypt_user_home="/var/lib/$letsencrypt_username"
 
 logfile="$(pwd)/letsencrypt-setup-log.txt"
 touch $logfile
-chmod 664 $logfile
+chmod 0664 $logfile
 
 debugmode=false
 
@@ -91,7 +91,7 @@ else
 fi
 
 echo "Set permission for web_certrequest.sh"
-chmod 755 "$certconfigdir/web_certrequest.sh"
+chmod 0755 "$certconfigdir/web_certrequest.sh"
 echo "OK"
 
 
@@ -106,7 +106,7 @@ else
 fi
 
 echo "Set permission for openssl config"
-chmod 644 "$certconfigdir/openssl::$FQDNunderscores.cnf"
+chmod 0644 "$certconfigdir/openssl::$FQDNunderscores.cnf"
 echo "OK"
 
 
@@ -166,10 +166,10 @@ test -d "$letsencrypt_user_home/.letsencrypt" || mkdir -p "$letsencrypt_user_hom
 
 
 echo "Set permission for directories in user home"
-chmod 700 "$letsencrypt_user_home/bin"
-chmod 710 "$letsencrypt_user_home/challenges"
-chmod 700 "$letsencrypt_user_home/.letsencrypt"
-chmod 710 "$letsencrypt_user_home"
+chmod 0700 "$letsencrypt_user_home/bin"
+chmod 0710 "$letsencrypt_user_home/challenges"
+chmod 0700 "$letsencrypt_user_home/.letsencrypt"
+chmod 0710 "$letsencrypt_user_home"
 
 echo "Set ownership for directories in user home"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/bin"
@@ -261,7 +261,7 @@ else
 fi
 
 echo "Set permission for letsencrypt-renews-certs script"
-chmod 755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
+chmod 0755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
 
 echo "Set ownership for letsencrypt-renews-certs script"
 chown root:root  "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
@@ -277,7 +277,7 @@ else
 fi
 
 echo "Set permission for FQDN.cnf"
-chmod 644 "$letsencrypt_user_home/bin/FQDN.cnf"
+chmod 0644 "$letsencrypt_user_home/bin/FQDN.cnf"
 echo "OK"
 
 
@@ -286,7 +286,7 @@ echo "Copying $FQDNunderscores.csr from $certconfigdir into $letsencrypt_user_ho
 cp "$certconfigdir/$FQDNunderscores.csr" "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
 
 echo "Set permission for $FQDNunderscores.csr"
-chmod 644 "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
+chmod 0644 "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
 echo "OK"
 
 
@@ -345,8 +345,8 @@ if [ "$inetEnabled" = true ]; then
 	fi
 
 	echo "Set permission for letsencrypt certs"
-	chmod 644 "$file1"
-	chmod 644 "$file2"
+	chmod 0644 "$file1"
+	chmod 0644 "$file2"
 
 	echo "Set ownership for letsencrypt certs"
 	chown root:root "$file1"
