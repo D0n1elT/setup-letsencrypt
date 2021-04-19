@@ -368,7 +368,7 @@ else
 	sudo su letsencrypt -c "openssl genrsa 4096 > $letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set permission for account key"
-	chmod 644 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
+	chmod 0600 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set ownership for account key"
 	chown root:root "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
