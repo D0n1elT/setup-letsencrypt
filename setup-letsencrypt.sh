@@ -380,7 +380,7 @@ echo "OK"
 echo "Installing 'letsencrypt-renew-certs' command"
 commandfile="/usr/local/sbin/letsencrypt-renew-certs"
 if ! [ -s "$commandfile" ]; then
-	echo "IyEvYmluL2Jhc2gKCnN1IC0gbGV0c2VuY3J5cHQgLWMgfmxldHNlbmNyeXB0L2Jpbi9sZXRzZW5jcnlwdC1yZW5ldy1jZXJ0cwoKaW52b2tlLXJjLmQgYXBhY2hlMiByZXN0YXJ0" | base64 -d - > $commandfile
+	echo "IyEvYmluL2Jhc2gKCnN1IC0gbGV0c2VuY3J5cHQgLWMgfmxldHNlbmNyeXB0L2Jpbi9sZXRzZW5jcnlwdC1yZW5ldy1jZXJ0cwoK" | base64 -d - > $commandfile
 	echo "Installed 'letsencrypt-renew-certs' command" >> $logfile
 else
 	echo "Command was already installed."
@@ -440,6 +440,10 @@ if [ "$setup_apache" == "true" ]; then
 		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
 	else
 		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+	if [ -x "$commandfile" ]; then
+		echo "invoke-rc.d apache2 restart" >> $commandfile
 	fi
 
 
@@ -518,6 +522,10 @@ elif [ "$setup_nginx" == "true" ]; then
 		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
 	else
 		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+	if [ -x "$commandfile" ]; then
+		echo "invoke-rc.d nginx restart" >> $commandfile
 	fi
 
 	### Restarting Nginx ###
