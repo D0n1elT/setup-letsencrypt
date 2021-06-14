@@ -1,13 +1,20 @@
 #!/bin/bash
 
+apt install openssl ssl-cert
+
 certconfigdir="/root/SSL-Certs"
-setup_apache=true
+# FIXME: check whether apache2 or nginx are running
+if [ -d "/etc/apache2" ]; then
+    setup_apache=true
+elif [ -d "/etc/nginx" ]; then
+    setup_nginx=true
+fi
 letsencrypt_username="letsencrypt"
 letsencrypt_user_home="/var/lib/$letsencrypt_username"
 
 logfile="$(pwd)/letsencrypt-setup-log.txt"
 touch $logfile
-chmod 664 $logfile
+chmod 0664 $logfile
 
 debugmode=false
 
@@ -35,6 +42,9 @@ echo "Provided FQDN: $FQDN" >> $logfile
 
 echo "Setting up Apache2: $setup_apache"
 echo "Apache2: $setup_apache" >> $logfile
+
+echo "Setting up Nginx: $setup_nginx"
+echo "Nginx: $setup_nginx" >> $logfile
 
 echo "Certification-Config directory will be created in $certconfigdir"
 echo "Cert-Configs Directory: $certconfigdir" >> $logfile
@@ -81,7 +91,7 @@ else
 fi
 
 echo "Set permission for web_certrequest.sh"
-chmod 755 "$certconfigdir/web_certrequest.sh"
+chmod 0755 "$certconfigdir/web_certrequest.sh"
 echo "OK"
 
 
@@ -96,7 +106,7 @@ else
 fi
 
 echo "Set permission for openssl config"
-chmod 644 "$certconfigdir/openssl::$FQDNunderscores.cnf"
+chmod 0644 "$certconfigdir/openssl::$FQDNunderscores.cnf"
 echo "OK"
 
 
@@ -124,10 +134,10 @@ if [ "$debugmode" = false ]; then
 	cp "$certconfigdir/private/$FQDNunderscores.key" "/etc/ssl/private/$FQDNunderscores.key"
 
 	echo "Set permission for private key in /etc/ssl/private"
-	chmod 0600 "/etc/ssl/private/$FQDNunderscores.key"
+	chmod 0640 "/etc/ssl/private/$FQDNunderscores.key"
 
 	echo "Set ownership for private key in /etc/ssl/private"
-	chown root:root "/etc/ssl/private/$FQDNunderscores.key"
+	chown root:ssl-cert "/etc/ssl/private/$FQDNunderscores.key"
 	echo "OK"
 else
 	echo "Skipped copying private key"
@@ -145,6 +155,8 @@ echo "Creating user: '$letsencrypt_username'"
 sudo adduser --system --home "$letsencrypt_user_home" --shell /bin/bash "$letsencrypt_username"
 echo "OK"
 
+### Make sure webuser is in ssl-cert group ###
+sudo adduser www-data ssl-cert
 
 ### Creating directories in user home ###
 echo "Creating new directories in user home"
@@ -154,29 +166,102 @@ test -d "$letsencrypt_user_home/.letsencrypt" || mkdir -p "$letsencrypt_user_hom
 
 
 echo "Set permission for directories in user home"
-chmod 700 "$letsencrypt_user_home/bin"
-chmod 710 "$letsencrypt_user_home/challenges"
-chmod 700 "$letsencrypt_user_home/.letsencrypt"
-chmod 710 "$letsencrypt_user_home"
+chmod 0700 "$letsencrypt_user_home/bin"
+chmod 0710 "$letsencrypt_user_home/challenges"
+chmod 0700 "$letsencrypt_user_home/.letsencrypt"
+chmod 0710 "$letsencrypt_user_home"
 
 echo "Set ownership for directories in user home"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/bin"
-chown $letsencrypt_username:www-data "$letsencrypt_user_home/challenges"
+chown $letsencrypt_username:ssl-cert "$letsencrypt_user_home/challenges"
 chown $letsencrypt_username:nogroup  "$letsencrypt_user_home/.letsencrypt"
-chown $letsencrypt_username:www-data "$letsencrypt_user_home"
+chown $letsencrypt_username:ssl-cert "$letsencrypt_user_home"
 echo "OK"
 
 
 ### Deploying letsencrypt-renew-certs ###
 echo "Deploying letsencrypt-renew-certs"
 if ! [ -s "$letsencrypt_user_home/bin/letsencrypt-renew-certs" ]; then
-	echo "IyEvYmluL2Jhc2gKCnNldCAtZQoKZGVjbGFyZSBGUUROPSIkKGNhdCAke0hPTUV9L2Jpbi9GUUROLmNuZiB8IHRyIC1kICdccicpIgpkZWNsYXJlIEZRRE51bmRlcnNjb3Jlcz0iJChlY2hvICRGUUROIHwgc2VkICdzL1wuL18vZycpIgoKZGVjbGFyZSBrZXlzX2Jhc2VfcGF0aD0iJHtIT01FfS8ubGV0c2VuY3J5cHQiCmRlY2xhcmUgaW50ZXJtZWRpYXRlPSdsZXRzLWVuY3J5cHQteDMtY3Jvc3Mtc2lnbmVkLnBlbScKZGVjbGFyZSBhY2NvdW50X2tleV9wYXRoPSIke2tleXNfYmFzZV9wYXRofS9hY2NvdW50LSR7RlFETnVuZGVyc2NvcmVzfS5rZXkiCmRlY2xhcmUgY2VydF9iYXNlX3BhdGg9IiR7a2V5c19iYXNlX3BhdGh9LyR7RlFETnVuZGVyc2NvcmVzfSIKZGVjbGFyZSBpbnRlcm1lZGlhdGVfcGF0aD0iJHtrZXlzX2Jhc2VfcGF0aH0vJHtpbnRlcm1lZGlhdGV9IgpkZWNsYXJlIGNoYWxsZW5nZXNfcGF0aD0iJHtIT01FfS9jaGFsbGVuZ2VzIgpkZWNsYXJlIGNoZWNrZWRfcGF0aD0iJHtIT01FfS9jaGVja2VkIgoKZGVjbGFyZSAtaSBpPScwJwoKIyBJZiB0aGUgY2hlY2tlZCBmaWxlIGV4aXN0cywgd2UgaGF2ZSBhbHJlYWR5IHJlbmV3ZWQgdGhlIGNlcnRpZmljYXRlIGluIHRoZQojIHBhc3QuCmlmIFtbIC1lICIke2NoZWNrZWRfcGF0aH0iIF1dOyB0aGVuCiAgIyBIb3dldmVyLCBsaWZlIGdldHMgYSBiaXQgY29tcGxpY2F0ZWQuIFRoaXMgc2NyaXB0IGlzIHN1cHBvc2VkIHRvIHJ1biBldmVyeQogICMgNyBkYXlzIGF0IHRoZSBsYXRlc3QsIHN0YXJ0aW5nIHdpdGggdGhlIGZpcnN0IGRheSBvZiBldmVyeSBtb250aCwgYW5kIHdlCiAgIyBvbmx5IHdhbnQgdG8gcmVuZXcgdGhlIGNlcnRpZmljYXRlIG9uY2UgYSBtb250aC4KICAjIFdlIHdpbGwgY3JlYXRlIHRoZSBjaGVja2VkIGZpbGUgYXQgdGhlIHZlcnkgZW5kLCB3aGljaCBhbHNvIG1lYW5zIHRoYXQgaXQKICAjIHdpbGwgb25seSBiZSBjcmVhdGVkIG9uY2UgdGhlIGNlcnRpZmljYXRlIGhhcyBiZWVuIHN1Y2Nlc3NmdWxseSByZW5ld2VkLgogICMgRm9yIG5vdywgbGV0J3MgY2hlY2sgaWYgd2UgaGF2ZSB0byByZW1vdmUgaXQsIHdoaWNoIHdpbGwgYWx3YXlzIGJlIHRoZSBjYXNlCiAgIyBvbiB0aGUgZmlyc3QgZGF5IG9mIG1vbnRoLgogIGlmIFtbICIxIiA9ICIkKGRhdGUgIislLWQiKSIgXV07IHRoZW4KICAgICMgUmVtb3ZlIHRoZSBmaWxlLCBzdGFydGluZyB0aGUgcmVuZXdhbCBwcm9jZXNzLgogICAgcm0gLWYgIiR7Y2hlY2tlZF9wYXRofSIKICBlbHNlCiAgICAjIE90aGVyd2lzZSwgd2UgZG9uJ3QgYWN0dWFsbHkgbmVlZCBhIHJlbmV3YWwsIHNvIGp1c3Qgc3RvcC4KICAgIGV4aXQgMAogIGZpCmZpCgojIFNlZWQgJHtSQU5ET019IHVzaW5nIHRoZSBjdXJyZW50IHRpbWUuClJBTkRPTT0iJChkYXRlICcrJXMnKSIKCiMgTGVhdmUgb3JpZ2luYWwsIHNpZ25lZCBjZXJ0aWZpY2F0ZSB1bmhhcm1lZCBkdXJpbmcgcmVuZXdhbCBydW5zLgojIFRoaXMgaXMgdmVyeSBpbXBvcnRhbnQgc2luY2Ugb3RoZXJ3aXNlIGZhaWx1cmVzIHRvIHJlbmV3IHRoZSBjZXJ0aWZpY2F0ZQojIHdvdWxkIGxlYWQgdG8gYSBicm9rZW4vbWlzc2luZyBjZXJ0aWZpY2F0ZSwgd2hpY2ggbGVhZHMgdG8gY29tbW9uIEhUVFAKIyBzZXJ2ZXJzIGZhaWxpbmcgdG8gc3RhcnQgdXAgYW5kIGhlbmNlIG1ha2Ugc3Vic2VxdWVudCByZW5ld2FsIHJlcXVlc3RzCiMgaW1wb3NzaWJsZSAoYW5kLCB3b3JzZSwgYSBzZWxmLWluZmxpY3RlZCBkZW5pYWwtb2Ytc2VydmljZSBzaXR1YXRpb24pLgojIEhlbmNlLCB1c2UgYSB0ZW1wb3JhcnkgZmlsZSBmb3IgZmV0Y2hpbmcgdGhlIG5ld2VkIGNlcnRpZmljYXRlIGFuZCBvbmx5CiMgY29weSB0aGF0IGludG8gdGhlIGFjdHVhbCBjZXJ0aWZpY2F0ZSBmaWxlIHdoZW4gZXZlcnl0aGluZyB3b3JrZWQgb3V0IGZpbmUuCjo+ICIke2NlcnRfYmFzZV9wYXRofS5jcnQudG1wIgp3aGlsZSA6OyBkbwogICMgSWdub3JpbmcgZXJyb3JzIGhlcmUgLSBlcnJvcnMgd2lsbCBiZSBpbXBsaWNpdGx5IGhhbmRsZWQgYnkgdGhlIHRlbXBvcmFyeQogICMgcmVuZXdlZCBjZXJ0aWZpY2F0ZSBmaWxlIGJlaW5nIGVtcHR5LgogIGFjbWUtdGlueSAtLWFjY291bnQta2V5ICIke2FjY291bnRfa2V5X3BhdGh9IiBcCgkgICAgLS1jc3IgIiR7Y2VydF9iYXNlX3BhdGh9LmNzciIgXAoJICAgIC0tYWNtZS1kaXIgIiR7Y2hhbGxlbmdlc19wYXRofSIgXAoJICAgID4gIiR7Y2VydF9iYXNlX3BhdGh9LmNydC50bXAiIHx8IDoKCiAgaWYgdGVzdCBcISAtcyAiJHtjZXJ0X2Jhc2VfcGF0aH0uY3J0LnRtcCI7IHRoZW4KICAgICMgUmV0cnkgYXQgbW9zdCA2IHRpbWVzLgogICAgaWYgW1sgIiQoKCsraSkpIiAtZ3QgJzUnIF1dOyB0aGVuCiAgICAgIGVjaG8gJ0ZhaWxlZCB0byByZW5ldyBjZXJ0aWZpY2F0ZSB0b28gb2Z0ZW4sIGFib3J0aW5nLi4uJyA+JjIKICAgICAgZXhpdCAnMScKICAgIGVsc2UKICAgICAgIyBTbGVlcCBmb3IgYXQgbGVhc3QgMzAgbWludXRlcywgdXAgdG8gNjAuCiAgICAgICMgVGhlIHJhdGUgbGltaXRpbmcgcG9saWN5IHdvdWxkIGdpdmUgdXMgNSB0cmllcyBwZXIgYWNjb3VudC9ob3N0bmFtZS9ob3VyLAogICAgICAjIGJ1dCB0aGVyZSdzIHByb2JhYmx5IG5vIGhhcm0gaW4ga2VlcGluZyBhIChsYXJnZSkgc2FmZXR5IG1hcmdpbi4KICAgICAgZGVjbGFyZSAtaSBzbGVlcF90aW1lPSIkKCgzMCAqIDYwKSkiCgogICAgICAjIENhbGN1bGF0ZSBtYXhpbXVtIHJhbmRvbSB2YWx1ZSBmb3IgdW5pZm9ybSBtb2R1bG8gY2xhbXBpbmcuCiAgICAgICMgTW9kdWxvIGNsYW1waW5nIGlzIG9ubHkgdW5iaWFzZWQgaWYgdGhlIHJhbmRvbSBudW1iZXIgcmFuZ2UgZGl2aWRlZCBieQogICAgICAjIHRoZSBkaXZpc29yIGhhcyBubyByZW1haW5kZXIgKGkuZS4sIFJBTkRfTUFYICUgbiA9PSAwKS4KICAgICAgIyBIZW5jZSwgY2xhbXAgdGhlIHJhbmRvbSB2YWx1ZSByYW5nZSBhIGJpdCBmaXJzdC4KICAgICAgIyBUbyBub3QgZGlzY2FyZCB2YWx1ZXMgdW5uZWNlc3NhcmluZ2x5LCB1c2UgYSBkaWZmZXJlbnQgYWxnb3JpdGhtIHRoYXQKICAgICAgIyBoYW5kbGVzIGhpZ2ggZGl2aXNvciB2YWx1ZXMgZWZmaWNpZW50bHkgLSBldmVuIGlmIHdlIGRvbid0IG5lZWQgaXQgaW4KICAgICAgIyB0aGlzIGNhc2UgYW5kIGl0J3MgYWN0dWFsbHkgY291bnRlci1wcm9kdWN0aXZlIGhlcmUuCiAgICAgIGRlY2xhcmUgLWkgcmFuZG9tX2xpbWl0PSIkKCgzMjc2NyAtICgoKDMyNzY3ICUgMzApICsgMSkgJSAzMCkpKSIKCiAgICAgICMgSW5pdGlhbGl6ZS4KICAgICAgZGVjbGFyZSAtaSByYW5kb21fbWludXRlcz0iJHtSQU5ET019IgoKICAgICAgIyBGZXRjaCBuZXcgcmFuZG9tIG51bWJlciBpZiBvdmVyIHRoZSBsaW1pdC4KICAgICAgd2hpbGUgKCgke3JhbmRvbV9taW51dGVzfSA+ICR7cmFuZG9tX2xpbWl0fSkpOyBkbwoJcmFuZG9tX21pbnV0ZXM9IiR7UkFORE9NfSIKICAgICAgZG9uZQoKICAgICAgIyBDbGFtcCBpbnRvIHJhbmdlLCB3aGljaCB3aWxsIGJlIHVuaWZvcm1seSBhdCB0aGlzIHBvaW50LgogICAgICByYW5kb21fbWludXRlcz0iJCgoJHtyYW5kb21fbWludXRlc30gJSAzMCkpIgoKICAgICAgc2xlZXBfdGltZT0iJCgoJHtzbGVlcF90aW1lfSArICgke3JhbmRvbV9taW51dGVzfSAqIDYwKSkpIgoKICAgICAgIyBBbmQgYWN0dWFsbHkgc2xlZXAuCiAgICAgIHNsZWVwICIke3NsZWVwX3RpbWV9cyIKICAgIGZpCiAgZWxzZQogICAgIyBSZW5ld2FsIHN1Y2Nlc3NmdWwuCiAgICBicmVhawogIGZpCmRvbmUKCiMgQ29weWluZyB0aGUgY29udGVudCB2aWEgY2F0IHdpbGwgcHJlc2VydmUgb3JpZ2luYWwgZmlsZSBwZXJtaXNzaW9ucywgYW5kLAojIHByb2JhYmx5IGV2ZW4gbW9yZSBpbXBvcnRhbnRseSwgdGhlIGZpbGUncyBpbm9kZS4KY2F0ICIke2NlcnRfYmFzZV9wYXRofS5jcnQudG1wIiBcCiAgICA+ICIke2NlcnRfYmFzZV9wYXRofS5jcnQiCgpjYXQgIiR7Y2VydF9iYXNlX3BhdGh9LmNydCIgXAogICAgIiR7aW50ZXJtZWRpYXRlX3BhdGh9IiBcCiAgICA+ICIke2NlcnRfYmFzZV9wYXRofS5mdWxsY2hhaW4uY3J0IgoKIyBDcmVhdGUgY2hlY2tlZCBmaWxlLCBkZW5vdGluZyB0aGF0IHRoZSBzdWNjZXNzZnVsbHkgcmVuZXdlZCB0aGUgY2VydGlmaWNhdGUuCnRvdWNoICIke2NoZWNrZWRfcGF0aH0iCg==" | base64 -d - > "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
+	echo "IyEvYmluL2Jhc2gKCnNldCAtZQoKZGVjbGFyZSBGUUROPSIkKGNhdCAke0hPTUV9L2Jpbi9GUURO
+LmNuZiB8IHRyIC1kICdccicpIgpkZWNsYXJlIEZRRE51bmRlcnNjb3Jlcz0iJChlY2hvICRGUURO
+IHwgc2VkICdzL1wuL18vZycpIgoKZGVjbGFyZSBrZXlzX2Jhc2VfcGF0aD0iJHtIT01FfS8ubGV0
+c2VuY3J5cHQiCmRlY2xhcmUgaW50ZXJtZWRpYXRlPSdpc3JnLXJvb3QteDEtY3Jvc3Mtc2lnbmVk
+LnBlbScKZGVjbGFyZSBhY2NvdW50X2tleV9wYXRoPSIke2tleXNfYmFzZV9wYXRofS9hY2NvdW50
+LSR7RlFETnVuZGVyc2NvcmVzfS5rZXkiCmRlY2xhcmUgY2VydF9iYXNlX3BhdGg9IiR7a2V5c19i
+YXNlX3BhdGh9LyR7RlFETnVuZGVyc2NvcmVzfSIKZGVjbGFyZSBpbnRlcm1lZGlhdGVfcGF0aD0i
+JHtrZXlzX2Jhc2VfcGF0aH0vJHtpbnRlcm1lZGlhdGV9IgpkZWNsYXJlIGNoYWxsZW5nZXNfcGF0
+aD0iJHtIT01FfS9jaGFsbGVuZ2VzIgpkZWNsYXJlIGNoZWNrZWRfcGF0aD0iJHtIT01FfS9jaGVj
+a2VkIgoKZGVjbGFyZSAtaSBpPScwJwoKIyBJZiB0aGUgY2hlY2tlZCBmaWxlIGV4aXN0cywgd2Ug
+aGF2ZSBhbHJlYWR5IHJlbmV3ZWQgdGhlIGNlcnRpZmljYXRlIGluIHRoZQojIHBhc3QuCmlmIFtb
+IC1lICIke2NoZWNrZWRfcGF0aH0iIF1dOyB0aGVuCiAgIyBIb3dldmVyLCBsaWZlIGdldHMgYSBi
+aXQgY29tcGxpY2F0ZWQuIFRoaXMgc2NyaXB0IGlzIHN1cHBvc2VkIHRvIHJ1biBldmVyeQogICMg
+NyBkYXlzIGF0IHRoZSBsYXRlc3QsIHN0YXJ0aW5nIHdpdGggdGhlIGZpcnN0IGRheSBvZiBldmVy
+eSBtb250aCwgYW5kIHdlCiAgIyBvbmx5IHdhbnQgdG8gcmVuZXcgdGhlIGNlcnRpZmljYXRlIG9u
+Y2UgYSBtb250aC4KICAjIFdlIHdpbGwgY3JlYXRlIHRoZSBjaGVja2VkIGZpbGUgYXQgdGhlIHZl
+cnkgZW5kLCB3aGljaCBhbHNvIG1lYW5zIHRoYXQgaXQKICAjIHdpbGwgb25seSBiZSBjcmVhdGVk
+IG9uY2UgdGhlIGNlcnRpZmljYXRlIGhhcyBiZWVuIHN1Y2Nlc3NmdWxseSByZW5ld2VkLgogICMg
+Rm9yIG5vdywgbGV0J3MgY2hlY2sgaWYgd2UgaGF2ZSB0byByZW1vdmUgaXQsIHdoaWNoIHdpbGwg
+YWx3YXlzIGJlIHRoZSBjYXNlCiAgIyBvbiB0aGUgZmlyc3QgZGF5IG9mIG1vbnRoLgogIGlmIFtb
+ICIxIiA9ICIkKGRhdGUgIislLWQiKSIgXV07IHRoZW4KICAgICMgUmVtb3ZlIHRoZSBmaWxlLCBz
+dGFydGluZyB0aGUgcmVuZXdhbCBwcm9jZXNzLgogICAgcm0gLWYgIiR7Y2hlY2tlZF9wYXRofSIK
+ICBlbHNlCiAgICAjIE90aGVyd2lzZSwgd2UgZG9uJ3QgYWN0dWFsbHkgbmVlZCBhIHJlbmV3YWws
+IHNvIGp1c3Qgc3RvcC4KICAgIGV4aXQgMAogIGZpCmZpCgojIFNlZWQgJHtSQU5ET019IHVzaW5n
+IHRoZSBjdXJyZW50IHRpbWUuClJBTkRPTT0iJChkYXRlICcrJXMnKSIKCiMgTGVhdmUgb3JpZ2lu
+YWwsIHNpZ25lZCBjZXJ0aWZpY2F0ZSB1bmhhcm1lZCBkdXJpbmcgcmVuZXdhbCBydW5zLgojIFRo
+aXMgaXMgdmVyeSBpbXBvcnRhbnQgc2luY2Ugb3RoZXJ3aXNlIGZhaWx1cmVzIHRvIHJlbmV3IHRo
+ZSBjZXJ0aWZpY2F0ZQojIHdvdWxkIGxlYWQgdG8gYSBicm9rZW4vbWlzc2luZyBjZXJ0aWZpY2F0
+ZSwgd2hpY2ggbGVhZHMgdG8gY29tbW9uIEhUVFAKIyBzZXJ2ZXJzIGZhaWxpbmcgdG8gc3RhcnQg
+dXAgYW5kIGhlbmNlIG1ha2Ugc3Vic2VxdWVudCByZW5ld2FsIHJlcXVlc3RzCiMgaW1wb3NzaWJs
+ZSAoYW5kLCB3b3JzZSwgYSBzZWxmLWluZmxpY3RlZCBkZW5pYWwtb2Ytc2VydmljZSBzaXR1YXRp
+b24pLgojIEhlbmNlLCB1c2UgYSB0ZW1wb3JhcnkgZmlsZSBmb3IgZmV0Y2hpbmcgdGhlIG5ld2Vk
+IGNlcnRpZmljYXRlIGFuZCBvbmx5CiMgY29weSB0aGF0IGludG8gdGhlIGFjdHVhbCBjZXJ0aWZp
+Y2F0ZSBmaWxlIHdoZW4gZXZlcnl0aGluZyB3b3JrZWQgb3V0IGZpbmUuCjo+ICIke2NlcnRfYmFz
+ZV9wYXRofS5jcnQudG1wIgp3aGlsZSA6OyBkbwogICMgSWdub3JpbmcgZXJyb3JzIGhlcmUgLSBl
+cnJvcnMgd2lsbCBiZSBpbXBsaWNpdGx5IGhhbmRsZWQgYnkgdGhlIHRlbXBvcmFyeQogICMgcmVu
+ZXdlZCBjZXJ0aWZpY2F0ZSBmaWxlIGJlaW5nIGVtcHR5LgogIGFjbWUtdGlueSAtLWFjY291bnQt
+a2V5ICIke2FjY291bnRfa2V5X3BhdGh9IiBcCgkgICAgLS1jc3IgIiR7Y2VydF9iYXNlX3BhdGh9
+LmNzciIgXAoJICAgIC0tYWNtZS1kaXIgIiR7Y2hhbGxlbmdlc19wYXRofSIgXAoJICAgID4gIiR7
+Y2VydF9iYXNlX3BhdGh9LmNydC50bXAiIHx8IDoKCiAgaWYgdGVzdCBcISAtcyAiJHtjZXJ0X2Jh
+c2VfcGF0aH0uY3J0LnRtcCI7IHRoZW4KICAgICMgUmV0cnkgYXQgbW9zdCA2IHRpbWVzLgogICAg
+aWYgW1sgIiQoKCsraSkpIiAtZ3QgJzUnIF1dOyB0aGVuCiAgICAgIGVjaG8gJ0ZhaWxlZCB0byBy
+ZW5ldyBjZXJ0aWZpY2F0ZSB0b28gb2Z0ZW4sIGFib3J0aW5nLi4uJyA+JjIKICAgICAgZXhpdCAn
+MScKICAgIGVsc2UKICAgICAgIyBTbGVlcCBmb3IgYXQgbGVhc3QgMzAgbWludXRlcywgdXAgdG8g
+NjAuCiAgICAgICMgVGhlIHJhdGUgbGltaXRpbmcgcG9saWN5IHdvdWxkIGdpdmUgdXMgNSB0cmll
+cyBwZXIgYWNjb3VudC9ob3N0bmFtZS9ob3VyLAogICAgICAjIGJ1dCB0aGVyZSdzIHByb2JhYmx5
+IG5vIGhhcm0gaW4ga2VlcGluZyBhIChsYXJnZSkgc2FmZXR5IG1hcmdpbi4KICAgICAgZGVjbGFy
+ZSAtaSBzbGVlcF90aW1lPSIkKCgzMCAqIDYwKSkiCgogICAgICAjIENhbGN1bGF0ZSBtYXhpbXVt
+IHJhbmRvbSB2YWx1ZSBmb3IgdW5pZm9ybSBtb2R1bG8gY2xhbXBpbmcuCiAgICAgICMgTW9kdWxv
+IGNsYW1waW5nIGlzIG9ubHkgdW5iaWFzZWQgaWYgdGhlIHJhbmRvbSBudW1iZXIgcmFuZ2UgZGl2
+aWRlZCBieQogICAgICAjIHRoZSBkaXZpc29yIGhhcyBubyByZW1haW5kZXIgKGkuZS4sIFJBTkRf
+TUFYICUgbiA9PSAwKS4KICAgICAgIyBIZW5jZSwgY2xhbXAgdGhlIHJhbmRvbSB2YWx1ZSByYW5n
+ZSBhIGJpdCBmaXJzdC4KICAgICAgIyBUbyBub3QgZGlzY2FyZCB2YWx1ZXMgdW5uZWNlc3Nhcmlu
+Z2x5LCB1c2UgYSBkaWZmZXJlbnQgYWxnb3JpdGhtIHRoYXQKICAgICAgIyBoYW5kbGVzIGhpZ2gg
+ZGl2aXNvciB2YWx1ZXMgZWZmaWNpZW50bHkgLSBldmVuIGlmIHdlIGRvbid0IG5lZWQgaXQgaW4K
+ICAgICAgIyB0aGlzIGNhc2UgYW5kIGl0J3MgYWN0dWFsbHkgY291bnRlci1wcm9kdWN0aXZlIGhl
+cmUuCiAgICAgIGRlY2xhcmUgLWkgcmFuZG9tX2xpbWl0PSIkKCgzMjc2NyAtICgoKDMyNzY3ICUg
+MzApICsgMSkgJSAzMCkpKSIKCiAgICAgICMgSW5pdGlhbGl6ZS4KICAgICAgZGVjbGFyZSAtaSBy
+YW5kb21fbWludXRlcz0iJHtSQU5ET019IgoKICAgICAgIyBGZXRjaCBuZXcgcmFuZG9tIG51bWJl
+ciBpZiBvdmVyIHRoZSBsaW1pdC4KICAgICAgd2hpbGUgKCgke3JhbmRvbV9taW51dGVzfSA+ICR7
+cmFuZG9tX2xpbWl0fSkpOyBkbwoJcmFuZG9tX21pbnV0ZXM9IiR7UkFORE9NfSIKICAgICAgZG9u
+ZQoKICAgICAgIyBDbGFtcCBpbnRvIHJhbmdlLCB3aGljaCB3aWxsIGJlIHVuaWZvcm1seSBhdCB0
+aGlzIHBvaW50LgogICAgICByYW5kb21fbWludXRlcz0iJCgoJHtyYW5kb21fbWludXRlc30gJSAz
+MCkpIgoKICAgICAgc2xlZXBfdGltZT0iJCgoJHtzbGVlcF90aW1lfSArICgke3JhbmRvbV9taW51
+dGVzfSAqIDYwKSkpIgoKICAgICAgIyBBbmQgYWN0dWFsbHkgc2xlZXAuCiAgICAgIHNsZWVwICIk
+e3NsZWVwX3RpbWV9cyIKICAgIGZpCiAgZWxzZQogICAgIyBSZW5ld2FsIHN1Y2Nlc3NmdWwuCiAg
+ICBicmVhawogIGZpCmRvbmUKCiMgQ29weWluZyB0aGUgY29udGVudCB2aWEgY2F0IHdpbGwgcHJl
+c2VydmUgb3JpZ2luYWwgZmlsZSBwZXJtaXNzaW9ucywgYW5kLAojIHByb2JhYmx5IGV2ZW4gbW9y
+ZSBpbXBvcnRhbnRseSwgdGhlIGZpbGUncyBpbm9kZS4KY2F0ICIke2NlcnRfYmFzZV9wYXRofS5j
+cnQudG1wIiBcCiAgICA+ICIke2NlcnRfYmFzZV9wYXRofS5jcnQiCgpjYXQgIiR7Y2VydF9iYXNl
+X3BhdGh9LmNydCIgXAogICAgIiR7aW50ZXJtZWRpYXRlX3BhdGh9IiBcCiAgICA+ICIke2NlcnRf
+YmFzZV9wYXRofS5mdWxsY2hhaW4uY3J0IgoKIyBDcmVhdGUgY2hlY2tlZCBmaWxlLCBkZW5vdGlu
+ZyB0aGF0IHRoZSBzdWNjZXNzZnVsbHkgcmVuZXdlZCB0aGUgY2VydGlmaWNhdGUuCnRvdWNoICIk
+e2NoZWNrZWRfcGF0aH0iCg==" | base64 -d - > "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
 else
 	echo "Letsencrypt-renew-certs script was already deployed."
 fi
 
 echo "Set permission for letsencrypt-renews-certs script"
-chmod 755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
+chmod 0755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
 
 echo "Set ownership for letsencrypt-renews-certs script"
 chown root:root  "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
@@ -192,7 +277,7 @@ else
 fi
 
 echo "Set permission for FQDN.cnf"
-chmod 644 "$letsencrypt_user_home/bin/FQDN.cnf"
+chmod 0644 "$letsencrypt_user_home/bin/FQDN.cnf"
 echo "OK"
 
 
@@ -201,7 +286,7 @@ echo "Copying $FQDNunderscores.csr from $certconfigdir into $letsencrypt_user_ho
 cp "$certconfigdir/$FQDNunderscores.csr" "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
 
 echo "Set permission for $FQDNunderscores.csr"
-chmod 644 "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
+chmod 0644 "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.csr"
 echo "OK"
 
 
@@ -224,8 +309,8 @@ fi
 ### Downloading Letsencrypt .pem 's ###
 if [ "$inetEnabled" = true ]; then
 	echo "Downloading certificates from letsencrypt"
-	url1="https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt"
-	file1="$letsencrypt_user_home/.letsencrypt/lets-encrypt-x3-cross-signed.pem"
+	url1="https://letsencrypt.org/certs/isrgrootx1.pem"
+	file1="$letsencrypt_user_home/.letsencrypt/isrgrootx1.pem"
 	if [ -r "$file1" ]; then
 		echo "Detected that '$file1' is already present. Using it..."
 	else
@@ -241,8 +326,8 @@ if [ "$inetEnabled" = true ]; then
 			exit -1
 		fi
 	fi
-	url2="https://letsencrypt.org/certs/letsencryptauthorityx3.pem.txt"
-	file2="$letsencrypt_user_home/.letsencrypt/letsencryptauthorityx3.pem"
+	url2="https://letsencrypt.org/certs/isrg-root-x1-cross-signed.pem"
+	file2="$letsencrypt_user_home/.letsencrypt/isrg-root-x1-cross-signed.pem"
 	if [ -r "$file2" ]; then
         	echo "Detected that '$file2' is already present. Using it..."
 	else
@@ -260,8 +345,8 @@ if [ "$inetEnabled" = true ]; then
 	fi
 
 	echo "Set permission for letsencrypt certs"
-	chmod 644 "$file1"
-	chmod 644 "$file2"
+	chmod 0644 "$file1"
+	chmod 0644 "$file2"
 
 	echo "Set ownership for letsencrypt certs"
 	chown root:root "$file1"
@@ -283,7 +368,7 @@ else
 	sudo su letsencrypt -c "openssl genrsa 4096 > $letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set permission for account key"
-	chmod 644 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
+	chmod 0600 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set ownership for account key"
 	chown root:root "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
@@ -295,7 +380,7 @@ echo "OK"
 echo "Installing 'letsencrypt-renew-certs' command"
 commandfile="/usr/local/sbin/letsencrypt-renew-certs"
 if ! [ -s "$commandfile" ]; then
-	echo "IyEvYmluL2Jhc2gKCnN1IC0gbGV0c2VuY3J5cHQgLWMgfmxldHNlbmNyeXB0L2Jpbi9sZXRzZW5jcnlwdC1yZW5ldy1jZXJ0cwoKaW52b2tlLXJjLmQgYXBhY2hlMiByZXN0YXJ0" | base64 -d - > $commandfile
+	echo "IyEvYmluL2Jhc2gKCnN1IC0gbGV0c2VuY3J5cHQgLWMgfmxldHNlbmNyeXB0L2Jpbi9sZXRzZW5jcnlwdC1yZW5ldy1jZXJ0cwoK" | base64 -d - > $commandfile
 	echo "Installed 'letsencrypt-renew-certs' command" >> $logfile
 else
 	echo "Command was already installed."
@@ -309,86 +394,206 @@ echo "OK"
 #todo: cronjob
 
 
-if [ "$setup_apache" = false ]; then
-	echo "Didn't configure apache2."
+if [ "$setup_apache" == "true" ]; then
+	##################
+	### SETTING UP ###
+	### APACHE 2   ###
+	##################
+
+	apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
+	### Deploying $apache_acme_conf ###
+	echo "Deploying '$apache_acme_conf'"
+	touch $apache_acme_conf
+	if ! [ -s "$apache_acme_conf" ]; then
+		echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
+		echo "OK"
+	else
+		echo "Apache2 config was already deployed..."
+	fi
+
+	### Enabling $apache_acme_conf ###
+	echo "Enabling '$apache_acme_conf'..."
+	sudo a2enconf acme-tiny
+	echo "OK"
+
+
+	### Restarting Apache2 ###
+	echo "Restarting Apache2..."
+	sudo invoke-rc.d apache2 restart
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "NOT OK! Restarting Apache2 failed..."
+		echo "Restarting apache2 failed" >> $logfile
+	fi
+
+	### EXECUTING letsencrypt-renew-script ###
+	echo "Executing letsencrypt-renew-certs script!"
+	echo "Executing letsencrypt-renew-certs script" >> $logfile
+	sudo letsencrypt-renew-certs
+	echo "OK"
+
+
+	### Symlink cert ###
+	sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+	else
+		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+	if [ -x "$commandfile" ]; then
+		echo "invoke-rc.d apache2 restart" >> $commandfile
+	fi
+
+
+	### Enabling the SSL module ###
+	echo "Enabling the SSL module..."
+	sudo a2enmod ssl
+	echo "OK"
+
+
+	### Restarting Apache2 ###
+	echo "Restarting Apache2..."
+	sudo invoke-rc.d apache2 restart
+	echo "OK"
+
+	echo "-------------------"
+	echo "Script Finished!"
+	echo "Please adjust your apache ssl site configuration to:"
+	echo "-------------------"
+	echo "SSLCertificateFile      /etc/ssl/certs/$FQDNunderscores.fullchain.crt"
+	echo "SSLCertificateKeyFile   /etc/ssl/private/$FQDNunderscores.key"
+	echo ""
+	echo "If you want your users to be always redirected to https then put the following into your *HTTP* site configuration:"
+	echo ""
+	echo "RewriteEngine on"
+	echo "RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/.*"
+	echo "RewriteRule /(.*) https://$FQDN/\$1 [L,NC,NE]"
+	echo ""
+	echo "And don't forget to enable the rewrite module."
+	echo "a2enmod rewrite"
+	echo "-----THANK YOU-----"
+
+elif [ "$setup_nginx" == "true" ]; then
+
+	##################
+	### SETTING UP ###
+	###  NGINX     ###
+	##################
+
+	nginx_acme_conf="/etc/nginx/snippets/acme-tiny.conf"
+	### Deploying $nginx_acme_conf ###
+	echo "Deploying '$nginx_acme_conf'"
+	touch $nginx_acme_conf
+	if ! [ -s "$nginx_acme_conf" ]; then
+		echo "bG9jYXRpb24gLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlIHsKICAgIGFsaWFzIC92YXIvbGliL2xldHNlbmNyeXB0L2NoYWxsZW5nZXM7CiAgICBhbGxvdyBhbGw7CiAgICBhdXRvaW5kZXggb2ZmOwp9Cgo=" | base64 -d - > $nginx_acme_conf
+		echo "OK"
+	else
+		echo "Nginx config was already deployed..."
+	fi
+
+	### Enabling $apache_acme_conf ###
+
+	echo "Enabling '$nginx_acme_conf' for default website..."
+	if ! grep -q "snippets/acme-tiny.conf" /etc/nginx/sites-available/default; then
+		sed -r -i /etc/nginx/sites-available/default -e "/\s+root\ \/var\/www\/html;/a \\\n\ \ \ \ \ \ \ \ \# Provide /.well-known/acme-challenge location\n\ \ \ \ \ \ \ \ include snippets/acme-tiny.conf;"
+	fi
+
+	### Restarting Nginx ###
+	echo "Restarting Nginx..."
+	sudo invoke-rc.d nginx restart
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "NOT OK! Restarting Nginx failed..."
+		echo "Restarting nginx failed" >> $logfile
+	fi
+
+	### EXECUTING letsencrypt-renew-script ###
+	echo "Executing letsencrypt-renew-certs script!"
+	echo "Executing letsencrypt-renew-certs script" >> $logfile
+	sudo letsencrypt-renew-certs
+	echo "OK"
+
+	### Symlink cert ###
+	sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
+	else
+		echo "NOT OK! But Symlink was problably just already there..."
+	fi
+
+	if [ -x "$commandfile" ]; then
+		echo "invoke-rc.d nginx restart" >> $commandfile
+	fi
+
+	### Restarting Nginx ###
+	echo "Restarting Nginx..."
+	sudo invoke-rc.d nginx restart
+	echo "OK"
+
+	echo "-------------------"
+	echo "Script Finished!"
+	echo "Please adjust your nginx ssl site configuration to:"
+	echo "-------------------"
+	cat << EOF
+## Redirects all HTTP traffic to the HTTPS host
+server {
+
+  listen 0.0.0.0:80;
+  listen [::]:80 ipv6only=on;
+
+  server_name ${FQDN};
+  server_tokens off; ## Don't show the nginx version number, a security best practice
+
+  location / {
+    rewrite     ^   https://\$host\$request_uri? permanent;
+  }
+
+  # handle Letsencrypt renewals without redirecting to https://
+  include snippets/acme-tiny.conf;
+
+  access_log  /var/log/nginx/${FQDN}_access.log;
+  error_log   /var/log/nginx/${FQDN}_error.log;
+}
+
+server {
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ipv6only=on ssl;
+
+    ## Strong SSL Security
+    ## https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html & https://cipherli.st/
+    ssl on;
+    ssl_certificate /etc/ssl/certs/${FQDNunderscores}.fullchain.crt;
+    ssl_certificate_key /etc/ssl/private/${FQDNunderscores}.key;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 5m;
+
+    # replace 'localhost' with your fqdn if you want to use zammad from remote
+    server_name ${FQDN};
+
+    # security - prevent information disclosure about server version
+    server_tokens off;
+
+    access_log  /var/log/nginx/${FQDN}_access.log;
+    error_log   /var/log/nginx/${FQDN}_error.log;
+
+    # YOUR SITE CONFIGURATION COMES BELOW HERE
+
+    # ...
+
+}
+EOF
+	echo "-----THANK YOU-----"
+
+else
+
+	echo "Didn't configure neither apache2 nor nginx."
 	echo "Script has finished!"
 	exit 0;
+
 fi
-
-################
-###SETTING UP###
-####APACHE 2####
-################
-
-
-apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
-### Deploying $apache_acme_conf ###
-echo "Deploying '$apache_acme_conf'"
-touch $apache_acme_conf
-if ! [ -s "$apache_acme_conf" ]; then
-	echo "QWxpYXMgLy53ZWxsLWtub3duL2FjbWUtY2hhbGxlbmdlLyAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzLwoKPERpcmVjdG9yeSAvdmFyL2xpYi9sZXRzZW5jcnlwdC9jaGFsbGVuZ2VzPgogICAgUmVxdWlyZSBhbGwgZ3JhbnRlZAogICAgT3B0aW9ucyAtSW5kZXhlcwo8L0RpcmVjdG9yeT4=" | base64 -d - > $apache_acme_conf
-	echo "OK"
-else
-	echo "Apache2 config was already deployed..."
-fi
-
-### Enabling $apache_acme_conf ###
-echo "Enabling '$apache_acme_conf'..."
-sudo a2enconf acme-tiny
-echo "OK"
-
-
-### Restarting Apache2 ###
-echo "Restarting Apache2..."
-sudo invoke-rc.d apache2 restart
-if [ $? -eq 0 ]; then
-	echo "OK"
-else
-	echo "NOT OK! Restarting Apache2 failed..."
-	echo "Restarting apache2 failed" >> $logfile
-fi
-
-### EXECUTING letsencrypt-renew-script ###
-echo "Executing letsencrypt-renew-certs script!"
-echo "Executing letsencrypt-renew-certs script" >> $logfile
-sudo letsencrypt-renew-certs
-echo "OK"
-
-
-### Symlink cert ###
-sudo ln -s "$letsencrypt_user_home/.letsencrypt/$FQDNunderscores.fullchain.crt" "/etc/ssl/certs/$FQDNunderscores.fullchain.crt" > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-        echo "Symlinked .crt to '/etc/ssl/certs/$FQDNunderscores.fullchain.crt'"
-else
-        echo "NOT OK! But Symlink was problably just already there..."
-fi
-
-
-### Enabling the SSL module ###
-echo "Enabling the SSL module..."
-sudo a2enmod ssl
-echo "OK"
-
-
-### Restarting Apache2 ###
-echo "Restarting Apache2..."
-sudo invoke-rc.d apache2 restart
-echo "OK"
-
-
-echo "-------------------"
-echo "Script Finished!"
-echo "Please adjust your apache ssl site configuration to:"
-echo "-------------------"
-echo "SSLCertificateFile      /etc/ssl/certs/$FQDNunderscores.fullchain.crt"
-echo "SSLCertificateKeyFile   /etc/ssl/private/$FQDNunderscores.key"
-echo ""
-echo "If you want your users to be always redirected to https then put the following into your *HTTP* site configuration:"
-echo ""
-echo "RewriteEngine on"
-echo "RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/.*"
-echo "RewriteRule /(.*) https://$FQDN/\$1 [L,NC,NE]"
-echo ""
-echo "And don't forget to enable the rewrite module."
-echo "a2enmod rewrite"
-echo "-----THANK YOU-----"
