@@ -268,13 +268,9 @@ chown root:root  "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
 echo "OK"
 
 
-### Creating FQDN.cnf file ###
-echo "Creating the FQDN.cnf file..."
-if ! [ -s "$letsencrypt_user_home/bin/FQDN.cnf" ]; then
-	printf "$FQDNunderscores" | tr -d '\r' > "$letsencrypt_user_home/bin/FQDN.cnf"
-else
-	echo "FQDN.cnf was already created."
-fi
+### Creating FQDN.cnf file used by letsencrypt-renew-certs ###
+echo "Creating/Overwriting the FQDN.cnf file..."
+printf "$FQDNunderscores" | tr -d '\r' > "$letsencrypt_user_home/bin/FQDN.cnf"
 
 echo "Set permission for FQDN.cnf"
 chmod 0644 "$letsencrypt_user_home/bin/FQDN.cnf"
@@ -395,6 +391,7 @@ echo "OK"
 
 
 if [ "$setup_apache" == "true" ]; then
+
 	##################
 	### SETTING UP ###
 	### APACHE 2   ###
