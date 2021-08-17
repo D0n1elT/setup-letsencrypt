@@ -12,6 +12,3 @@ The automatic refreshing of the certificates will be set up using this way: http
 * <server_hostname>:
   * The hostname or domain of the webserver which requests the letsencrypt certificate.
   * For example server.example.org
-
-
-  
