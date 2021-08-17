@@ -371,7 +371,7 @@ else
 	chmod 0600 "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 
 	echo "Set ownership for account key"
-	chown root:root "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
+	chown letsencrypt:root "$letsencrypt_user_home/.letsencrypt/account-$FQDNunderscores.key"
 fi
 echo "OK"
 
