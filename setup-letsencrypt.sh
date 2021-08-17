@@ -424,7 +424,10 @@ if [ "$setup_apache" == "true" ]; then
 		echo "OK"
 	else
 		echo "NOT OK! Restarting Apache2 failed..."
+		echo "Make sure that apache2 is configured such" \
+			 "that challenges can be reached from the outside."
 		echo "Restarting apache2 failed" >> $logfile
+		exit 1
 	fi
 
 	### EXECUTING letsencrypt-renew-script ###
@@ -507,7 +510,10 @@ elif [ "$setup_nginx" == "true" ]; then
 		echo "OK"
 	else
 		echo "NOT OK! Restarting Nginx failed..."
-		echo "Restarting nginx failed" >> $logfile
+		echo "Restarting Nginx failed" >> $logfile
+		echo "Make sure that Nginx is configured such" \
+			 "that challenges can be reached from the outside."
+		exit 1
 	fi
 
 	### EXECUTING letsencrypt-renew-script ###
