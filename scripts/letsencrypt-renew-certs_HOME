@@ -1,0 +1,108 @@
+#!/bin/bash
+
+set -e
+
+declare FQDN="$(cat ${HOME}/bin/FQDN.cnf | tr -d '\r')"
+declare FQDNunderscores="$(echo $FQDN | sed 's/\./_/g')"
+
+declare keys_base_path="${HOME}/.letsencrypt"
+declare intermediate='isrg-root-x1-cross-signed.pem'
+declare account_key_path="${keys_base_path}/account-${FQDNunderscores}.key"
+declare cert_base_path="${keys_base_path}/${FQDNunderscores}"
+declare intermediate_path="${keys_base_path}/${intermediate}"
+declare challenges_path="${HOME}/challenges"
+declare checked_path="${HOME}/checked"
+
+declare -i i='0'
+
+# If the checked file exists, we have already renewed the certificate in the
+# past.
+if [[ -e "${checked_path}" ]]; then
+  # However, life gets a bit complicated. This script is supposed to run every
+  # 7 days at the latest, starting with the first day of every month, and we
+  # only want to renew the certificate once a month.
+  # We will create the checked file at the very end, which also means that it
+  # will only be created once the certificate has been successfully renewed.
+  # For now, let's check if we have to remove it, which will always be the case
+  # on the first day of month.
+  if [[ "1" = "$(date "+%-d")" ]]; then
+    # Remove the file, starting the renewal process.
+    rm -f "${checked_path}"
+  else
+    # Otherwise, we don't actually need a renewal, so just stop.
+    exit 0
+  fi
+fi
+
+# Seed ${RANDOM} using the current time.
+RANDOM="$(date '+%s')"
+
+# Leave original, signed certificate unharmed during renewal runs.
+# This is very important since otherwise failures to renew the certificate
+# would lead to a broken/missing certificate, which leads to common HTTP
+# servers failing to start up and hence make subsequent renewal requests
+# impossible (and, worse, a self-inflicted denial-of-service situation).
+# Hence, use a temporary file for fetching the newed certificate and only
+# copy that into the actual certificate file when everything worked out fine.
+:> "${cert_base_path}.crt.tmp"
+while :; do
+  # Ignoring errors here - errors will be implicitly handled by the temporary
+  # renewed certificate file being empty.
+  acme-tiny --account-key "${account_key_path}" \
+	    --csr "${cert_base_path}.csr" \
+	    --acme-dir "${challenges_path}" \
+	    > "${cert_base_path}.crt.tmp" || :
+
+  if test \! -s "${cert_base_path}.crt.tmp"; then
+    # Retry at most 6 times.
+    if [[ "$((++i))" -gt '5' ]]; then
+      echo 'Failed to renew certificate too often, aborting...' >&2
+      exit '1'
+    else
+      # Sleep for at least 30 minutes, up to 60.
+      # The rate limiting policy would give us 5 tries per account/hostname/hour,
+      # but there's probably no harm in keeping a (large) safety margin.
+      declare -i sleep_time="$((30 * 60))"
+
+      # Calculate maximum random value for uniform modulo clamping.
+      # Modulo clamping is only unbiased if the random number range divided by
+      # the divisor has no remainder (i.e., RAND_MAX % n == 0).
+      # Hence, clamp the random value range a bit first.
+      # To not discard values unnecessaringly, use a different algorithm that
+      # handles high divisor values efficiently - even if we don't need it in
+      # this case and it's actually counter-productive here.
+      declare -i random_limit="$((32767 - (((32767 % 30) + 1) % 30)))"
+
+      # Initialize.
+      declare -i random_minutes="${RANDOM}"
+
+      # Fetch new random number if over the limit.
+      while ((${random_minutes} > ${random_limit})); do
+	random_minutes="${RANDOM}"
+      done
+
+      # Clamp into range, which will be uniformly at this point.
+      random_minutes="$((${random_minutes} % 30))"
+
+      sleep_time="$((${sleep_time} + (${random_minutes} * 60)))"
+
+      # And actually sleep.
+      sleep "${sleep_time}s"
+    fi
+  else
+    # Renewal successful.
+    break
+  fi
+done
+
+# Copying the content via cat will preserve original file permissions, and,
+# probably even more importantly, the file's inode.
+cat "${cert_base_path}.crt.tmp" \
+    > "${cert_base_path}.crt"
+
+cat "${cert_base_path}.crt" \
+    "${intermediate_path}" \
+    > "${cert_base_path}.fullchain.crt"
+
+# Create checked file, denoting that the successfully renewed the certificate.
+touch "${checked_path}"

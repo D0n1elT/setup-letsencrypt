@@ -1,0 +1,4 @@
+#!/bin/bash
+
+su - letsencrypt -c ~letsencrypt/bin/letsencrypt-renew-certs
+
