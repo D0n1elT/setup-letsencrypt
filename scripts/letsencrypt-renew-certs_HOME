@@ -6,10 +6,8 @@ declare FQDN="$(cat ${HOME}/bin/FQDN.cnf | tr -d '\r')"
 declare FQDNunderscores="$(echo $FQDN | sed 's/\./_/g')"
 
 declare keys_base_path="${HOME}/.letsencrypt"
-declare intermediate='isrg-root-x1-cross-signed.pem'
 declare account_key_path="${keys_base_path}/account-${FQDNunderscores}.key"
 declare cert_base_path="${keys_base_path}/${FQDNunderscores}"
-declare intermediate_path="${keys_base_path}/${intermediate}"
 declare challenges_path="${HOME}/challenges"
 declare checked_path="${HOME}/checked"
 
@@ -101,7 +99,6 @@ cat "${cert_base_path}.crt.tmp" \
     > "${cert_base_path}.crt"
 
 cat "${cert_base_path}.crt" \
-    "${intermediate_path}" \
     > "${cert_base_path}.fullchain.crt"
 
 # Create checked file, denoting that the successfully renewed the certificate.
