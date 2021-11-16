@@ -221,64 +221,43 @@ echo "Testing for internet connection..."
 echo -e "GET http://letsencrypt.org HTTP/1.0\n\n" | nc letsencrypt.org 80 > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-	echo "Can connect to letsencrypt. Internet connection seems good."
-	inetEnabled=true
+	echo "Can connect to http://letsencrypt.org. Internet connection seems good."
 else
-	echo "Can't connect to letsencrypt."
-	inetEnabled=false
+	echo "Can't connect to http://letsencrypt.org!"
+	while true; do
+		read -p "Do you wish to proceed? [Yy/Nn] " yn
+		case $yn in
+			[Yy]* ) break;;
+			[Nn]* ) echo "Exiting..."; exit;;
+			* ) ;;
+		esac
+	done
 fi
 
-
-### Downloading Letsencrypt .pem 's ###
-if [ "$inetEnabled" = true ]; then
-	echo "Downloading certificates from letsencrypt"
-	url1="https://letsencrypt.org/certs/isrgrootx1.pem"
+function delete_old_intermediate_certs() {
 	file1="$letsencrypt_user_home/.letsencrypt/isrgrootx1.pem"
 	if [ -r "$file1" ]; then
-		echo "Detected that '$file1' is already present. Using it..."
-	else
-		wget $url1 -O $file1.tmp -a $logfile
-		if [ -s "$file1.tmp" ]; then
-			echo "Successfully downloaded '$file1'!"
-			echo "Downloaded '$file1'" >> $logfile
-			mv $file1.tmp $file1
-		else
-			echo "Failed to download '$file1'!"
-                	echo "Failed to download '$file1'!" >> $logfile
-			rm $file1.tmp
-			exit -1
-		fi
+		echo "Detected that '$file1' is still present. Deleting it..."
+		rm "$file1"
 	fi
-	url2="https://letsencrypt.org/certs/isrg-root-x1-cross-signed.pem"
+
 	file2="$letsencrypt_user_home/.letsencrypt/isrg-root-x1-cross-signed.pem"
 	if [ -r "$file2" ]; then
-        	echo "Detected that '$file2' is already present. Using it..."
-	else
-        	wget $url2 -O $file2.tmp -a $logfile
-        	if [ -s "$file2.tmp" ]; then
-                	echo "Successfully downloaded '$file2'!"
-                	echo "Downloaded '$file2'" >> $logfile
-			mv $file2.tmp $file2
-		else
-			echo "Failed to download '$file2'!"
-			echo "Failed to download '$file2'!" >> $logfile
-			rm $file2.tmp
-			exit -1
-        	fi
+		echo "Detected that '$file2' is still present. Deleting it..."
+		rm "$file2"
 	fi
+}
 
-	echo "Set permission for letsencrypt certs"
-	chmod 0644 "$file1"
-	chmod 0644 "$file2"
-
-	echo "Set ownership for letsencrypt certs"
-	chown root:root "$file1"
-	chown root:root "$file2"
-	echo "OK"
-else
-	echo "Didn't download certificates from letsencrypt"
-fi
-
+### Downloading letsencrypt .pem's is not required anymore ###
+### We will delete old .pem's. now ###
+while true; do
+	read -p "Do you wish to delete old unused intermediate certificates from letsencrypt? [Yy/Nn] " yn
+	case $yn in
+		[Yy]* ) delete_old_intermediate_certs; break;;
+		[Nn]* ) break;;
+		* ) ;;
+	esac
+done
 
 ### Creating new account key ###
 # Testing if there is already an account file
