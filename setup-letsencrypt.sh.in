@@ -55,12 +55,20 @@ echo "User: $letsencrypt_username with home $letsencrypt_user_home" >> $logfile
 function deploy_file() {
 	target_file_path="$1"
 	file_content_encoded="$2"
+	file_content_checksum="$3"
 	echo "Deploying $target_file_path"
 	if ! [ -s "$target_file_path" ]; then
 		echo "$file_content_encoded" | base64 -d - > "$target_file_path"
 	else
-		echo "$target_file_path was already deployed."
-		return 1
+		checksum_deployed=$(sha256sum "$target_file_path" | cut -d " " -f1)
+		checksum_expected="$source_file_checksum"
+		if [ "${checksum_deployed}" = "${checksum_expected}" ]; then
+			echo "$target_file_path was already deployed."
+			return 1
+		else
+			echo "$target_file_path to be updated deployed."
+			echo "$file_content_encoded" | base64 -d - > "$target_file_path"
+		fi
 	fi
 	return 0
 }
@@ -96,14 +104,14 @@ echo "OK"
 
 
 ### Deploying web_certrequest.sh ###
-deploy_file "$certconfigdir/web_certrequest.sh" "@B64:scripts/web_certrequest.sh@"
+deploy_file "$certconfigdir/web_certrequest.sh" "@B64:scripts/web_certrequest.sh@" "@CHECKSUM:scripts/web_certrequest.sh@"
 echo "Set permission for web_certrequest.sh"
 chmod 0755 "$certconfigdir/web_certrequest.sh"
 echo "OK"
 
 
 ### Deploying openssl config ###
-deploy_file "$certconfigdir/openssl::$FQDNunderscores.cnf" "@B64:data/openssl::HOST.cnf@"
+deploy_file "$certconfigdir/openssl::$FQDNunderscores.cnf" "@B64:data/openssl::HOST.cnf@" "@CHECKSUM:data/openssl::HOST.cnf@"
 ret=$?
 
 if [ $ret -eq 0 ]; then
@@ -187,7 +195,7 @@ echo "OK"
 
 
 ### Deploying letsencrypt-renew-certs ###
-deploy_file "$letsencrypt_user_home/bin/letsencrypt-renew-certs" "@B64:scripts/letsencrypt-renew-certs_HOME@"
+deploy_file "$letsencrypt_user_home/bin/letsencrypt-renew-certs" "@B64:scripts/letsencrypt-renew-certs_HOME@" "@CHECKSUM:scripts/letsencrypt-renew-certs_HOME@"
 
 echo "Set permission for letsencrypt-renews-certs script"
 chmod 0755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
@@ -283,7 +291,7 @@ echo "OK"
 ### Installing letsencrypt-renew-certs command ###
 echo "Installing 'letsencrypt-renew-certs' command"
 commandfile="/usr/local/sbin/letsencrypt-renew-certs"
-deploy_file "$commandfile" "@B64:scripts/letsencrypt-renew-certs_SBIN@"
+deploy_file "$commandfile" "@B64:scripts/letsencrypt-renew-certs_SBIN@" "@CHECKSUM:scripts/letsencrypt-renew-certs_SBIN@"
 
 echo "Making it executable"
 chmod 0700 $commandfile
@@ -301,7 +309,7 @@ if [ "$setup_apache" == "true" ]; then
 	apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
 
 	### Deploying $apache_acme_conf ###
-	deploy_file "$apache_acme_conf" "@B64:data/apache_acme-tiny.conf@"
+	deploy_file "$apache_acme_conf" "@B64:data/apache_acme-tiny.conf@" "@CHECKSUM:data/apache_acme-tiny.conf@"
 
 	### Enabling $apache_acme_conf ###
 	echo "Enabling '$apache_acme_conf'..."
@@ -381,7 +389,7 @@ elif [ "$setup_nginx" == "true" ]; then
 
 	### Deploying $nginx_acme_conf ###
 	touch $nginx_acme_conf
-	deploy_file "$nginx_acme_conf" "@B64:data/nginx_acme-tiny.conf@"
+	deploy_file "$nginx_acme_conf" "@B64:data/nginx_acme-tiny.conf@" "@CHECKSUM:data/nginx_acme-tiny.conf@"
 
 	### Enabling $apache_acme_conf ###
 
