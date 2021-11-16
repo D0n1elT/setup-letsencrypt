@@ -52,6 +52,19 @@ echo "Cert-Configs Directory: $certconfigdir" >> $logfile
 echo "Setting up with user '$letsencrypt_username' with home '$letsencrypt_user_home'"
 echo "User: $letsencrypt_username with home $letsencrypt_user_home" >> $logfile
 
+function deploy_file() {
+	target_file_path="$1"
+	file_content_encoded="$2"
+	echo "Deploying $target_file_path"
+	if ! [ -s "$target_file_path" ]; then
+		echo "$file_content_encoded" | base64 -d - > "$target_file_path"
+	else
+		echo "$target_file_path was already deployed."
+		return 1
+	fi
+	return 0
+}
+
 param=$2
 if [ -n $param ]; then
 	if [ "$param" = "true" ]; then
@@ -83,26 +96,20 @@ echo "OK"
 
 
 ### Deploying web_certrequest.sh ###
-echo "Deploying web_certrequest.sh"
-if ! [ -s "$certconfigdir/web_certrequest.sh" ]; then
-	echo "@B64:scripts/web_certrequest.sh@" | base64 -d - > "$certconfigdir/web_certrequest.sh"
-else
-	echo "web_certrequest.sh was already deployed."
-fi
-
+deploy_file "$certconfigdir/web_certrequest.sh" "@B64:scripts/web_certrequest.sh@"
 echo "Set permission for web_certrequest.sh"
 chmod 0755 "$certconfigdir/web_certrequest.sh"
 echo "OK"
 
 
 ### Deploying openssl config ###
-echo "Deploying openssl config"
-if ! [ -s "$certconfigdir/openssl::$FQDNunderscores.cnf" ]; then
-	echo "@B64:data/openssl::HOST.cnf@" | base64 -d - > "$certconfigdir/openssl::$FQDNunderscores.cnf"
-	is_opensslconfig_new=true
+deploy_file "$certconfigdir/openssl::$FQDNunderscores.cnf" "@B64:data/openssl::HOST.cnf@"
+ret=$?
+
+if [ $ret -eq 0 ]; then
+	is_opensslconfig_new = true
 else
-	echo "OpenSSL config was already deployed."
-	is_opensslconfig_new=false
+	is_opensslconfig_new = false
 fi
 
 echo "Set permission for openssl config"
@@ -180,12 +187,7 @@ echo "OK"
 
 
 ### Deploying letsencrypt-renew-certs ###
-echo "Deploying letsencrypt-renew-certs"
-if ! [ -s "$letsencrypt_user_home/bin/letsencrypt-renew-certs" ]; then
-	echo "@B64:scripts/letsencrypt-renew-certs_HOME@" | base64 -d - > "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
-else
-	echo "Letsencrypt-renew-certs script was already deployed."
-fi
+deploy_file "$letsencrypt_user_home/bin/letsencrypt-renew-certs" "@B64:scripts/letsencrypt-renew-certs_HOME@"
 
 echo "Set permission for letsencrypt-renews-certs script"
 chmod 0755 "$letsencrypt_user_home/bin/letsencrypt-renew-certs"
@@ -281,12 +283,7 @@ echo "OK"
 ### Installing letsencrypt-renew-certs command ###
 echo "Installing 'letsencrypt-renew-certs' command"
 commandfile="/usr/local/sbin/letsencrypt-renew-certs"
-if ! [ -s "$commandfile" ]; then
-	echo "@B64:scripts/letsencrypt-renew-certs_SBIN@" | base64 -d - > $commandfile
-	echo "Installed 'letsencrypt-renew-certs' command" >> $logfile
-else
-	echo "Command was already installed."
-fi
+deploy_file "$commandfile" "@B64:scripts/letsencrypt-renew-certs_SBIN@"
 
 echo "Making it executable"
 chmod 0700 $commandfile
@@ -294,8 +291,6 @@ echo "OK"
 
 
 #todo: cronjob
-
-
 if [ "$setup_apache" == "true" ]; then
 
 	##################
@@ -304,15 +299,9 @@ if [ "$setup_apache" == "true" ]; then
 	##################
 
 	apache_acme_conf="/etc/apache2/conf-available/acme-tiny.conf"
+
 	### Deploying $apache_acme_conf ###
-	echo "Deploying '$apache_acme_conf'"
-	touch $apache_acme_conf
-	if ! [ -s "$apache_acme_conf" ]; then
-		echo "@B64:data/apache_acme-tiny.conf@" | base64 -d - > $apache_acme_conf
-		echo "OK"
-	else
-		echo "Apache2 config was already deployed..."
-	fi
+	deploy_file "$apache_acme_conf" "@B64:data/apache_acme-tiny.conf@"
 
 	### Enabling $apache_acme_conf ###
 	echo "Enabling '$apache_acme_conf'..."
@@ -389,15 +378,10 @@ elif [ "$setup_nginx" == "true" ]; then
 	##################
 
 	nginx_acme_conf="/etc/nginx/snippets/acme-tiny.conf"
+
 	### Deploying $nginx_acme_conf ###
-	echo "Deploying '$nginx_acme_conf'"
 	touch $nginx_acme_conf
-	if ! [ -s "$nginx_acme_conf" ]; then
-		echo "@B64:data/nginx_acme-tiny.conf@" | base64 -d - > $nginx_acme_conf
-		echo "OK"
-	else
-		echo "Nginx config was already deployed..."
-	fi
+	deploy_file "$nginx_acme_conf" "@B64:data/nginx_acme-tiny.conf@"
 
 	### Enabling $apache_acme_conf ###
 
