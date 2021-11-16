@@ -21,9 +21,9 @@ if [[ -e "${checked_path}" ]]; then
   # only want to renew the certificate once a month.
   # We will create the checked file at the very end, which also means that it
   # will only be created once the certificate has been successfully renewed.
-  # For now, let's check if we have to remove it, which will always be the case
-  # on the first day of month.
-  if [[ "1" = "$(date "+%-d")" ]]; then
+  # For now, let's check if we have to remove it, which we will, if the file is older
+  # than seven days.
+  if [[ $((7*24*3600)) -lt $(($(date +%s) - $(stat -c %W "${checked_path}"))) ]]; then
     # Remove the file, starting the renewal process.
     rm -f "${checked_path}"
   else
