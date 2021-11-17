@@ -52,21 +52,25 @@ echo "Cert-Configs Directory: $certconfigdir" >> $logfile
 echo "Setting up with user '$letsencrypt_username' with home '$letsencrypt_user_home'"
 echo "User: $letsencrypt_username with home $letsencrypt_user_home" >> $logfile
 
+# returns: 1 if already deployed and 0 if not.
 function deploy_file() {
 	target_file_path="$1"
 	file_content_encoded="$2"
 	file_content_checksum="$3"
 	echo "Deploying $target_file_path"
+	echo "Deploying $target_file_path" >> $logfile
 	if ! [ -s "$target_file_path" ]; then
 		echo "$file_content_encoded" | base64 -d - > "$target_file_path"
 	else
 		checksum_deployed=$(sha256sum "$target_file_path" | cut -d " " -f1)
-		checksum_expected="$source_file_checksum"
+		checksum_expected="$file_content_checksum"
 		if [ "${checksum_deployed}" = "${checksum_expected}" ]; then
 			echo "$target_file_path was already deployed."
+			echo "$target_file_path was already deployed." >> $logfile
 			return 1
 		else
 			echo "$target_file_path to be updated deployed."
+			echo "$target_file_path to be updated deployed." >> $logfile
 			echo "$file_content_encoded" | base64 -d - > "$target_file_path"
 		fi
 	fi
@@ -110,14 +114,15 @@ chmod 0755 "$certconfigdir/web_certrequest.sh"
 echo "OK"
 
 
-### Deploying openssl config ###
-deploy_file "$certconfigdir/openssl::$FQDNunderscores.cnf" "@B64:data/openssl::HOST.cnf@" "@CHECKSUM:data/openssl::HOST.cnf@"
+### Check if openssl config needs to be updated on this system ###
+deploy_file "$certconfigdir/openssl::default.cnf" "@B64:data/openssl::HOST.cnf@" "@CHECKSUM:data/openssl::HOST.cnf@"
 ret=$?
 
 if [ $ret -eq 0 ]; then
-	is_opensslconfig_new = true
-else
-	is_opensslconfig_new = false
+	### Force deploy openssl config since openssl::default.cnf was old ###
+	deploy_file "$certconfigdir/openssl::$FQDNunderscores.cnf" "@B64:data/openssl::HOST.cnf@" "always-true"
+
+	is_opensslconfig_new=true
 fi
 
 echo "Set permission for openssl config"
@@ -127,7 +132,14 @@ echo "OK"
 
 ### User is supposed to enter alternative DNS names ###
 ###  and cert. info (like orgaName or countryName)  ###
-echo "Please configure this file properly"
+read | cat <<- EndOfMessage
+	An editor will now open.
+	Please configure the openssl config file properly.
+	Don't forget to add alternative DNS names at the bottom of the file.
+	Don't alter anything which is not marked by "ADAPT HERE".
+	Please press enter to continue...
+EndOfMessage
+
 if [ "$is_opensslconfig_new" = true ]; then
 	echo "DNS.1 = $FQDN" >> "$certconfigdir/openssl::$FQDNunderscores.cnf"
 fi
