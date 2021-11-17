@@ -1,1 +1,2 @@
 setup-letsencrypt.sh
+*.sha256sum
